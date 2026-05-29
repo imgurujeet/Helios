@@ -10,7 +10,7 @@ val navConfig = SavedStateConfiguration {
         polymorphic(NavKey :: class){
             subclass(Home::class , Home.serializer())
             subclass(Explore::class , Explore.serializer())
-
+            subclass(Profile::class, Profile.serializer())
         }
     }
 }

@@ -8,3 +8,6 @@ data object Home : NavKey
 
 @Serializable
 data object Explore : NavKey
+
+@Serializable
+data object Profile : NavKey
