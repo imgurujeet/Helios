@@ -22,7 +22,7 @@ kotlin {
     }
     
     android {
-       namespace = "ai.achaialabs.promptr.shared"
+       namespace = "ai.achaialabs.helios.shared"
        compileSdk = libs.versions.android.compileSdk.get().toInt()
        minSdk = libs.versions.android.minSdk.get().toInt()
     
@@ -63,6 +63,7 @@ kotlin {
             implementation(libs.material.icons.extended)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor3)
+            implementation(libs.coil.kt.coil.svg)
            // implementation(libs.coil.video)
 
             implementation(libs.kotlinx.datetime)
@@ -87,10 +88,17 @@ kotlin {
             implementation(libs.supabase.auth)
             implementation(libs.supabase.compose.auth)
             implementation(libs.supabase.storage)
+            //revenuecat
+            implementation(libs.revenuecat.core)
+            implementation(libs.revenuecat.ui)
+            implementation(libs.androidx.datastore.preferences.core)
 
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(
+                "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2"
+            )
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

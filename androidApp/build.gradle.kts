@@ -21,11 +21,11 @@ dependencies {
 }
 
 android {
-    namespace = "ai.achaialabs.promptr"
+    namespace = "ai.achaialabs.helios"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "ai.achaialabs.promptr"
+        applicationId = "ai.achaialabs.helios"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1

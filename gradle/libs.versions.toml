@@ -11,6 +11,7 @@ androidx-lifecycle = "2.11.0-beta01"
 androidx-testExt = "1.3.0"
 coilNetworkKtor3 = "3.4.0"
 composeMultiplatform = "1.11.0"
+datastorePreferencesCore = "1.2.1"
 junit = "4.13.2"
 kotlin = "2.3.21"
 ktorClientAndroid = "3.5.0"
@@ -29,9 +30,12 @@ kotlinxDatetime = "0.8.0"
 sqlite = "2.6.2"
 compottie = "2.0.0"
 supabase = "3.6.0"
+revenuecat-kmp = "3.0.3"
 
 
 [libraries]
+androidx-datastore-preferences-core = { module = "androidx.datastore:datastore-preferences-core", version.ref = "datastorePreferencesCore" }
+coil-kt-coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coilNetworkKtor3" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coilNetworkKtor3" }
 supabase-bom = { module = "io.github.jan-tennert.supabase:bom", version.ref = "supabase" }
 supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt", version.ref = "supabase" }
@@ -83,6 +87,12 @@ androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }
+
+#revenuecat
+revenuecat-core = { module = "com.revenuecat.purchases:purchases-kmp-core", version.ref = "revenuecat-kmp" }
+revenuecat-ui = { module = "com.revenuecat.purchases:purchases-kmp-ui", version.ref = "revenuecat-kmp" }
+
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }

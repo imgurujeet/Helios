@@ -1,4 +1,4 @@
-rootProject.name = "Promptr"
+rootProject.name = "helios"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
