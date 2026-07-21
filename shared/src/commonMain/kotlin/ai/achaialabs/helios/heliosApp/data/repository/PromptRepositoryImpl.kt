@@ -1,25 +1,48 @@
 package ai.achaialabs.helios.heliosApp.data.repository
 
+import ai.achaialabs.helios.heliosApp.data.local.dao.PromptDao
 import ai.achaialabs.helios.heliosApp.data.local.datasource.HomeHeroLocalDataSource
 import ai.achaialabs.helios.heliosApp.data.local.datasource.PromptLocalDataSource
+import ai.achaialabs.helios.heliosApp.data.local.entity.PromptEntity
+import ai.achaialabs.helios.heliosApp.data.mapper.toDomain
 import ai.achaialabs.helios.heliosApp.data.mapper.toEntity
 import ai.achaialabs.helios.heliosApp.data.remote.mapper.toEntity
 import ai.achaialabs.helios.heliosApp.data.remote.datasource.PromptRemoteDataSource
 import ai.achaialabs.helios.heliosApp.domain.model.HomeHero
 import ai.achaialabs.helios.heliosApp.domain.model.Prompt
-import ai.achaialabs.helios.heliosApp.domain.repository.AuthRepository
 import ai.achaialabs.helios.heliosApp.domain.repository.PromptRepository
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class PromptRepositoryImpl(
     private val localPromptDataSource: PromptLocalDataSource,
     private val localHeroDataSource: HomeHeroLocalDataSource,
     private val remoteDataSource: PromptRemoteDataSource,
+    private val promptDao: PromptDao,
 ) : PromptRepository {
+
+    override fun searchPrompts(query: String): Flow<PagingData<Prompt>> {
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false,
+                initialLoadSize = 20
+            ),
+            pagingSourceFactory = {
+                promptDao.searchPromptsPaging(query)
+            }
+        ).flow.map { pagingData ->
+            // Use your existing domain mapper
+            pagingData.map { it.toDomain() }
+        }
+    }
 
     // 1. OBSERVE: UI listens to this. As limit grows, Room emits more items.
     override fun observeHomePrompts(limit: Int): Flow<List<Prompt>> {
@@ -90,9 +113,6 @@ class PromptRepositoryImpl(
             // Rollback only if the server explicitly failed
             localPromptDataSource.updateLikeStatus(promptId, currentEntity.isLiked, currentEntity.likesCount)
 
-            // 🚀 ADD THIS: Notify the UI of the failure so the user knows!
-            // You can use a SharedFlow or a Result type to show a Snackbar in the UI.
-            println("Like sync failed for $promptId - Reverted.")
         }
     }
 
@@ -105,5 +125,22 @@ class PromptRepositoryImpl(
         if (!isSuccess) {
             localPromptDataSource.updateBookmarkStatus(promptId, currentEntity.isBookmarked)
         }
+    }// In PromptRepositoryImpl.kt
+
+    override fun getLikedPrompts(): Flow<PagingData<Prompt>> {
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false,
+                initialLoadSize = 20
+            ),
+            pagingSourceFactory = {
+                promptDao.getLikedPromptsPaging()
+            }
+        ).flow // 1. Convert Pager to Flow
+            .map { pagingData ->
+                // 2. Map Entity to Domain
+                pagingData.map { it.toDomain() }
+            }
     }
 }

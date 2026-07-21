@@ -1,12 +1,14 @@
 package ai.achaialabs.helios.heliosApp.ui.navigation
 
 import ai.achaialabs.helios.heliosApp.ui.explore.ExploreScreen
+import ai.achaialabs.helios.heliosApp.ui.favourite.FavouriteScreen
 import ai.achaialabs.helios.heliosApp.ui.home.HomeScreen
 import ai.achaialabs.helios.heliosApp.ui.navigation.bottomNavBar.BottomNavBar
 import ai.achaialabs.helios.heliosApp.ui.navigation.bottomNavBar.ScrollAwareBottomBar
 import ai.achaialabs.helios.heliosApp.ui.navigation.bottomNavBar.bottomNavItem
 import ai.achaialabs.helios.heliosApp.ui.profile.ProfileScreen
 import ai.achaialabs.helios.heliosApp.ui.promptDetail.PromptDetailScreen
+import ai.achaialabs.helios.heliosApp.ui.search.SearchScreen
 import ai.achaialabs.helios.heliosApp.ui.viewall.ViewAllScreen
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -93,9 +95,38 @@ fun AppNavigation(
                     )
                 }
 
+                is Search -> NavEntry(key) {
+                    SearchScreen(
+                        chromeState = chromeState,
+                        onPromptClick = { promptId ->
+                            chromeState.navigateTo(PromptDetail(promptId))
+                        },
+                        onBackClick = {
+                            goBack()
+                        }
+                    )
+                }
+
+
                 Profile -> NavEntry(key) {
                     ProfileScreen(
-                        onLogout = onLogout
+                        chromeState =chromeState,
+                        onLogout = onLogout,
+                        onUpgradeClick = {
+                            showPaywall = true
+                        }
+                    )
+                }
+
+                is Favourite -> NavEntry(key) {
+                    FavouriteScreen(
+                        chromeState = chromeState,
+                        onBackClick = {
+                            goBack()
+                        },
+                        onPromptClick = { promptId ->
+                            chromeState.navigateTo(PromptDetail(promptId))
+                        },
                     )
                 }
 
@@ -107,6 +138,9 @@ fun AppNavigation(
                         onBackClick = {
                             goBack()
 
+                        },
+                        onSubScribeClick = {
+                            showPaywall = true
                         }
                     )
                 }

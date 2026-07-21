@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -8,7 +9,55 @@ plugins {
     alias(libs.plugins.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.androidx.room)
+    alias(libs.plugins.aboutlibraries)
+    alias(libs.plugins.buildkonfig)
+
 }
+
+
+buildkonfig {
+    packageName = "ai.achaialabs.helios" // The package for the generated object
+
+    // Logic to read from your local.properties (which is not committed to Git)
+    val localProperties = Properties()
+    val localFile = rootProject.file("local.properties")
+    if (localFile.exists()) localProperties.load(localFile.inputStream())
+
+
+    defaultConfigs {
+        buildConfigField(
+            com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING,
+            "SUPABASE_URL",
+            localProperties.getProperty("SUPABASE_URL") ?: ""
+        )
+        buildConfigField(
+            com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING,
+            "SUPABASE_KEY",
+            localProperties.getProperty("SUPABASE_KEY") ?: ""
+        )
+        buildConfigField(
+            com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING,
+            "REVENUECAT_API_KEY",
+            localProperties.getProperty("REVENUECAT_API_KEY") ?: ""
+        )
+        buildConfigField(
+            com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING,
+            "GOOGLE_CLIENT_ID",
+            localProperties.getProperty("GOOGLE_CLIENT_ID") ?: ""
+        )
+
+        buildConfigField(com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING, "ADMOB_APP_ID", localProperties.getProperty("ADMOB_APP_ID") ?: "")
+        buildConfigField(com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING, "REWARDED_AD_UNIT_ID", localProperties.getProperty("REWARDED_AD_UNIT_ID") ?: "")
+        buildConfigField(com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING, "NATIVE_AD_UNIT_ID", localProperties.getProperty("NATIVE_AD_UNIT_ID") ?: "")
+
+    }
+
+}
+
+
+
+
+
 
 kotlin {
     listOf(
@@ -35,6 +84,7 @@ kotlin {
        withHostTest {
            isIncludeAndroidResources = true
        }
+
     }
     
     sourceSets {
@@ -47,6 +97,8 @@ kotlin {
             implementation(libs.coil.compose)
             implementation(libs.coil.network.okhttp)
             implementation(libs.coil.video)
+            implementation(libs.koin.android)
+            implementation(libs.play.services.ads)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -72,8 +124,8 @@ kotlin {
             implementation(libs.androidx.room.runtime)
             implementation(libs.androidx.sqlite.bundled)
             //koin
-            implementation(libs.koin.compose)
-            implementation(libs.koin.compose.viewmodel)
+            api(libs.koin.compose)
+            api(libs.koin.compose.viewmodel)
             //ktor
             implementation(libs.ktor.client.core)
             implementation(libs.kotlinx.coroutines.core)
@@ -92,6 +144,13 @@ kotlin {
             implementation(libs.revenuecat.core)
             implementation(libs.revenuecat.ui)
             implementation(libs.androidx.datastore.preferences.core)
+            implementation(libs.okio)
+
+            implementation(libs.aboutlibraries.compose.m3)
+            implementation(libs.paging.common)
+            implementation(libs.paging.compose.common)
+            implementation(libs.androidx.room.paging)
+            implementation(libs.androidx.paging.common)
 
         }
         commonTest.dependencies {
@@ -120,4 +179,18 @@ dependencies {
     add("kspIosSimulatorArm64", libs.androidx.room.compiler)
     // add("kspIosX64", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)
+
+
+
+}
+
+
+
+
+aboutLibraries {
+    export {
+        // This is the specific path for Compose Multiplatform resources
+        outputFile = file("src/commonMain/composeResources/files/aboutlibraries.json")
+        prettyPrint = true
+    }
 }

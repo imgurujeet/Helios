@@ -1,5 +1,7 @@
 package ai.achaialabs.helios.heliosApp.ui.promptDetail
 
+import ai.achaialabs.helios.heliosApp.ad.AdManager
+import ai.achaialabs.helios.heliosApp.ad.RewardedAdState
 import ai.achaialabs.helios.heliosApp.domain.model.Prompt
 import ai.achaialabs.helios.heliosApp.domain.model.Tool
 import ai.achaialabs.helios.heliosApp.domain.usecase.GetHomePromptsUseCase
@@ -15,7 +17,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -37,7 +41,10 @@ data class PromptDetailUiState(
     val toolsError: String? = null,
     val activeVideoId: String? = null,
     val isProUser: Boolean = false,
-    val revealedPrompts: Set<String> = emptySet()
+    val revealedPrompts: Set<String> = emptySet(),
+    val rewardedAdState: RewardedAdState =
+        RewardedAdState.Idle
+
 )
 
 
@@ -51,6 +58,7 @@ class PromptDetailViewModel(
     private val toggleBookmarkUseCase: ToggleBookmarkUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val observePromptsByCategoryUseCase: ObservePromptsByCategoryUseCase,
+    private val adManager: AdManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PromptDetailUiState())
@@ -74,6 +82,26 @@ class PromptDetailViewModel(
         getCurrentUserUseCase()
             .onEach { user ->
                 _uiState.update { it.copy(isProUser = user?.isPro ?: false) }
+            }
+            .launchIn(viewModelScope)
+
+
+        adManager.rewardedAdState
+            .onEach { adState ->
+
+                _uiState.update {
+                    it.copy(
+                        rewardedAdState = adState
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+        uiState.map { it.isProUser }
+            .distinctUntilChanged()
+            .onEach { isPro ->
+                if (!isPro) {
+                    adManager.preloadRewardedAd()
+                }
             }
             .launchIn(viewModelScope)
     }
@@ -180,11 +208,61 @@ class PromptDetailViewModel(
         }
     }
 
-    fun revealPrompt(promptId: String) {
-        // Logic: 1. Play Ad -> 2. On success, add to set
+
+    fun revealPrompt(
+        promptId: String
+    ) {
+
+        val currentState = _uiState.value
+
+        if (currentState.isProUser) {
+
+            unlockPrompt(promptId)
+
+            return
+        }
+
+        when (currentState.rewardedAdState) {
+
+            RewardedAdState.Loaded -> {
+
+                adManager.showRewardedAd {
+
+                    unlockPrompt(promptId)
+                }
+            }
+
+            RewardedAdState.Loading -> {
+
+                // loader already shown in UI
+            }
+
+            RewardedAdState.Showing -> {
+
+                // prevent multiple taps
+            }
+
+            RewardedAdState.Idle,
+            is RewardedAdState.Error -> {
+
+                // fallback UX
+
+                unlockPrompt(promptId)
+
+                adManager.preloadRewardedAd()
+            }
+        }
+    }
+
+    private fun unlockPrompt(
+        promptId: String
+    ) {
+
         _uiState.update { currentState ->
+
             currentState.copy(
-                revealedPrompts = currentState.revealedPrompts + promptId
+                revealedPrompts =
+                    currentState.revealedPrompts + promptId
             )
         }
     }

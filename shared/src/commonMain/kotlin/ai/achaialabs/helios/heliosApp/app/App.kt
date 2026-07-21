@@ -29,6 +29,9 @@ import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.launch
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
+import org.koin.dsl.KoinAppDeclaration
+import ai.achaialabs.helios.BuildKonfig
+import ai.achaialabs.helios.heliosApp.ad.AdManager
 
 sealed class AppState {
     data object Loading : AppState()
@@ -37,11 +40,19 @@ sealed class AppState {
 }
 @Preview
 @Composable
-fun App() {
-    KoinApplication(application = { modules(appModule) }) {
+fun App(
+    appDeclaration: KoinAppDeclaration = {}
+) {
+
+
+    KoinApplication(application = { appDeclaration()
+        modules(appModule) }) {
 
         val viewModel: MainViewModel = koinInject() // Inject the MainViewModel
         val appState by viewModel.appState.collectAsState()
+        LaunchedEffect(appState) {
+            println("UI APP STATE = $appState")
+        }
         val userThemePreference by viewModel.isDarkTheme.collectAsState()
         val systemTheme = isSystemInDarkTheme()
 
@@ -54,8 +65,17 @@ fun App() {
                 .build()
         }
 
-        // 2. Initialize RevenueCat globally once
-        Purchases.configure(PurchasesConfiguration.Builder("test_wKdc...").build())
+        LaunchedEffect(Unit) {
+
+            if (!Purchases.isConfigured) {
+
+                Purchases.configure(
+                    PurchasesConfiguration.Builder(
+                        BuildKonfig.REVENUECAT_API_KEY
+                    ).build()
+                )
+            }
+        }
 
         MaterialTheme(colorScheme = if (darkTheme) darkColorScheme() else lightColorScheme()) {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -63,6 +83,8 @@ fun App() {
                     targetState = appState,
                     transitionSpec = { fadeIn() togetherWith fadeOut() }
                 ) { state ->
+
+                    println("CURRENT SCREEN STATE = $state")
                     when (state) {
                         AppState.Loading -> SplashScreen(onSplashFinished = { /* Optional trigger */ })
 
@@ -79,108 +101,3 @@ fun App() {
         }
     }
 }
-//fun App() {
-//
-//    // 1. Simplified Koin Application initialization
-//    KoinApplication(
-//        application = {
-//            modules(appModule)
-//        }
-//    ) {
-//
-//
-//        val supabase = koinInject<SupabaseClient>()
-//        val isLoggedInUseCase: IsLoggedInUseCase = koinInject()
-//        val logoutUseCase: LogoutUseCase = koinInject()
-//
-//        val scope = rememberCoroutineScope()
-//        var appState by remember { mutableStateOf<AppState>(AppState.Loading) }
-//        var isPremium by remember { mutableStateOf(false) } // Track premium status
-//        val darkTheme = isSystemInDarkTheme()
-//
-//        // 2. Coil Setup
-//        setSingletonImageLoaderFactory { context ->
-//            ImageLoader.Builder(context)
-//                .components { add(KtorNetworkFetcherFactory()) }
-//                .build()
-//        }
-//
-//        // 3. Initialize RevenueCat & Observe Status
-//        val isRCConfigured = remember { mutableStateOf(false) }
-//
-//        LaunchedEffect(Unit) {
-//            if (!isRCConfigured.value) {
-//                val apiKey = "test_wKdcERNUCUoobyfItROgCxzndOf"
-//                try {
-//                    Purchases.configure(PurchasesConfiguration.Builder(apiKey).build())
-//                    isRCConfigured.value = true
-//                } catch (e: Exception) {
-//                    println("RC Config Error: ${e.message}")
-//                }
-//            }
-//        }
-//
-//        fun syncRevenueCat(userId: String) {
-//            Purchases.sharedInstance.logIn(
-//                newAppUserID = userId,
-//                onError = { println("RC Error: ${it.message}") },
-//                onSuccess = { _, created -> println("RC Synced! Created: $created") }
-//            )
-//        }
-//
-//        MaterialTheme(
-//            colorScheme = if (darkTheme) darkColorScheme() else lightColorScheme()
-//        ) {
-//            Box(modifier = Modifier.fillMaxSize()) {
-//                AnimatedContent(
-//                    targetState = appState,
-//                    transitionSpec = { fadeIn() togetherWith fadeOut() }
-//                ) { state ->
-//                    when (state) {
-//                        AppState.Loading -> {
-//                            SplashScreen(onSplashFinished = {
-//                                scope.launch {
-//                                    if (isLoggedInUseCase()) {
-//                                        supabase.auth.currentUserOrNull()?.id?.let { syncRevenueCat(it) }
-//                                        appState = AppState.Authenticated
-//                                    } else {
-//                                        appState = AppState.Unauthenticated
-//                                    }
-//                                }
-//                            })
-//                        }
-//                        AppState.Unauthenticated -> {
-//                            LoginScreen(onLoginSuccess = {
-//                                supabase.auth.currentUserOrNull()?.id?.let { syncRevenueCat(it) }
-//                                appState = AppState.Authenticated
-//                            })
-//                        }
-//                        AppState.Authenticated -> {
-//                            AppNavigation(
-//                                onLogout = {
-//                                    scope.launch {
-//                                        // 1. Log out from your backend/Supabase
-//                                        logoutUseCase()
-//
-//                                        // 2. Log out from RevenueCat with required callbacks
-//                                        Purchases.sharedInstance.logOut(
-//                                            onError = { error ->
-//                                                println("RC Logout Error: ${error.message}")
-//                                                // You can still proceed to unauthenticated state even if RC fails
-//                                                appState = AppState.Unauthenticated
-//                                            },
-//                                            onSuccess = {
-//                                                println("RC Logged out successfully")
-//                                                appState = AppState.Unauthenticated
-//                                            }
-//                                        )
-//                                    }
-//                                }
-//                            )
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}

@@ -4,6 +4,8 @@ import ai.achaialabs.helios.heliosApp.domain.model.User
 import kotlinx.coroutines.flow.Flow
 
 interface AuthRepository {
+
+    val isProFlow: Flow<Boolean>
     fun getCurrentUser(): Flow<User?>
     suspend fun loginWithGoogle(idToken: String): Result<User>
     suspend fun syncUser(): Result<User>

@@ -1,5 +1,6 @@
 package ai.achaialabs.helios.heliosApp.ui.home
 
+import ai.achaialabs.helios.heliosApp.ad.AdManager
 import ai.achaialabs.helios.heliosApp.domain.usecase.GetHomeHeroesUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.GetHomePromptsUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.RefreshHomeDataUseCase
@@ -25,7 +26,8 @@ class HomeViewModel(
     private val syncHomePromptsUseCase: SyncHomePromptsUseCase, // Added for pagination!
     private val toggleLikeUseCase: ToggleLikeUseCase,
     private val toggleBookmarkUseCase: ToggleBookmarkUseCase,
-    private val getCurrentUserUseCase: GetCurrentUserUseCase
+    private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val adManager: AdManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -40,9 +42,24 @@ class HomeViewModel(
     init {
         setupOfflineFirstObservation()
         setupHeroesAndUser()
+        observeNativeAds()
 
         // Fetch the very first page of data from Supabase
         refresh()
+    }
+
+    private fun observeNativeAds() {
+
+        adManager.nativeAdState
+            .onEach { state ->
+
+                _uiState.update {
+                    it.copy(
+                        nativeAdState = state
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun setupOfflineFirstObservation() {

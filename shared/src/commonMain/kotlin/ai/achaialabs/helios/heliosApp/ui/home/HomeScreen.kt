@@ -7,6 +7,7 @@ import ai.achaialabs.helios.heliosApp.ui.home.components.LoadingPromptCard
 import ai.achaialabs.helios.heliosApp.ui.home.components.LoadingPromptGrid
 import ai.achaialabs.helios.heliosApp.ui.navigation.ChromeState
 import ai.achaialabs.helios.heliosApp.ui.navigation.PromptDetail
+import ai.achaialabs.helios.heliosApp.ui.navigation.Search
 import ai.achaialabs.helios.heliosApp.utils.ObserveScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -23,6 +24,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun HomeScreen(
     chromeState: ChromeState,
+   // onSearchClick : () -> Unit,
     viewModel: HomeViewModel = koinViewModel()
 ) {
 
@@ -54,7 +56,9 @@ fun HomeScreen(
                 userName = uiState.currentUser?.name,
                 profileImageUrl = uiState.currentUser?.avatarUrl,
 //                onProfileClick = chromeState::onProfileClick,
-//                onSearchClick = chromeState::onSearchClick,
+                 onSearchClick = {
+                     chromeState.navigateTo(Search)
+                 },
                 scrollBehavior = scrollBehavior
             )
         }

@@ -1,5 +1,7 @@
 package ai.achaialabs.helios.heliosApp.app
 
+import ai.achaialabs.helios.heliosApp.ad.AdManager
+import ai.achaialabs.helios.heliosApp.data.local.ThemePreferences
 import ai.achaialabs.helios.heliosApp.data.remote.service.SubscriptionManager
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.IsLoggedInUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.LogoutUseCase
@@ -9,40 +11,121 @@ import com.revenuecat.purchases.kmp.Purchases
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MainViewModel(
     private val supabase: SupabaseClient,
     private val isLoggedInUseCase: IsLoggedInUseCase,
     private val logoutUseCase: LogoutUseCase,
-    private val subscriptionManager: SubscriptionManager
+    private val subscriptionManager: SubscriptionManager,
+    private val themePreferences: ThemePreferences,
+    private val adManager: AdManager
 ) : ViewModel() {
 
     private val _appState = MutableStateFlow<AppState>(AppState.Loading)
     val appState = _appState.asStateFlow()
 
-    private val _isDarkTheme = MutableStateFlow<Boolean?>(null)
-    val isDarkTheme = _isDarkTheme.asStateFlow()
+    val isDarkTheme = themePreferences.themeFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
 
-    init { checkSession() }
+    init {
+        preloadAds()
+        checkSession()
+    }
+
+
+    private fun preloadAds() {
+
+        adManager.preloadRewardedAd()
+
+        adManager.preloadNativeAd()
+    }
+
 
     private fun checkSession() {
         viewModelScope.launch {
-            if (isLoggedInUseCase()) {
-                subscriptionManager.syncSubscriptionStatus()
-                _appState.value = AppState.Authenticated
-            } else {
+
+
+            _appState.value = AppState.Loading
+
+            supabase.auth.awaitInitialization()
+            val user = supabase.auth.currentUserOrNull()
+
+
+            if (user == null) {
+
+
                 _appState.value = AppState.Unauthenticated
+                return@launch
+            }
+
+
+            _appState.value = AppState.Authenticated
+
+
+            try {
+
+                Purchases.sharedInstance.logIn(
+                    newAppUserID = user.id,
+                    onSuccess = { _, _ ->
+
+
+                        viewModelScope.launch {
+                            subscriptionManager.syncSubscriptionStatus()
+                        }
+                    },
+                    onError = { error ->
+                        println("RC ERROR = ${error.message}")
+                    }
+                )
+
+            } catch (e: Exception) {
+
+                println("RC EXCEPTION = ${e.message}")
             }
         }
     }
 
     // Call this when LoginScreen finishes successfully
     fun onLoginSuccess() {
+
         viewModelScope.launch {
-            subscriptionManager.syncSubscriptionStatus()
-            _appState.value = AppState.Authenticated
+
+            val user =
+                supabase.auth.currentUserOrNull()
+
+            if (user != null) {
+
+                Purchases.sharedInstance.logIn(
+                    newAppUserID = user.id,
+                    onSuccess = { _, _ ->
+
+                        viewModelScope.launch {
+
+                            subscriptionManager
+                                .syncSubscriptionStatus()
+
+                            _appState.value =
+                                AppState.Authenticated
+                        }
+                    },
+                    onError = { error ->
+
+                        println(
+                            "RC Login Error: ${error.message}"
+                        )
+
+                        _appState.value =
+                            AppState.Authenticated
+                    }
+                )
+            }
         }
     }
 
@@ -51,7 +134,7 @@ class MainViewModel(
             logoutUseCase()
             Purchases.sharedInstance.logOut(
                 onError = { error ->
-                    println("RC Logout Error: ${error.message}")
+                   // println("RC Logout Error: ${error.message}")
                     // You can still proceed to unauthenticated state even if RC fails
                     _appState.value = AppState.Unauthenticated
                 },
@@ -65,9 +148,9 @@ class MainViewModel(
     }
 
     fun setDarkTheme(isDark: Boolean) {
-        _isDarkTheme.value = isDark
-
-        // TODO: Later on, use DataStore or Multiplatform Settings here
-        // to save this boolean so the app remembers their choice on restart!
+        viewModelScope.launch {
+            // 3. ACTUALLY SAVE TO DISK
+            themePreferences.saveTheme(isDark)
+        }
     }
 }

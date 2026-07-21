@@ -118,7 +118,7 @@ fun HeroImageSection(
 
             onPlayClick = null,
 
-            // 🚀 UPGRADED COSMIC PLAY BUTTON
+            //  UPGRADED COSMIC PLAY BUTTON
             customPlayButton = if (isVideo && !effectiveIsPlaying) {
                 {
                     Box(

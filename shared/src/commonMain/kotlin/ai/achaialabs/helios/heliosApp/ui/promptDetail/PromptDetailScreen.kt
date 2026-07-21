@@ -1,12 +1,20 @@
 package ai.achaialabs.helios.heliosApp.ui.promptDetail
 
+import ai.achaialabs.helios.heliosApp.ad.AdManager
+import ai.achaialabs.helios.heliosApp.ad.RewardedAdState
+import ai.achaialabs.helios.heliosApp.domain.model.FeedMedia
 import ai.achaialabs.helios.heliosApp.domain.model.Prompt
 import ai.achaialabs.helios.heliosApp.ui.CosmicLottieLoader
+import ai.achaialabs.helios.heliosApp.ui.model.FeedMediaUi
 import ai.achaialabs.helios.heliosApp.ui.promptDetail.components.CosmicGate
 import ai.achaialabs.helios.heliosApp.ui.promptDetail.components.HeroImageSection
 import ai.achaialabs.helios.heliosApp.ui.promptDetail.components.LaunchControlCard
 import ai.achaialabs.helios.heliosApp.ui.promptDetail.components.PromptContentCard
 import ai.achaialabs.helios.heliosApp.ui.promptDetail.components.PromptDetailTopBar
+import ai.achaialabs.helios.heliosApp.ui.promptDetail.components.PromptInstructionCard
+import ai.achaialabs.helios.heliosApp.ui.share.components.PromptShareCard
+import ai.achaialabs.helios.heliosApp.ui.share.manager.ShareManager
+import ai.achaialabs.helios.heliosApp.ui.share.model.SharePromptUi
 import ai.achaialabs.helios.heliosApp.utils.rememberExternalAppLauncher
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -45,10 +53,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
@@ -56,8 +71,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+
 
 
 val CosmicDarkBg = Color(0xFF05070B)
@@ -74,18 +92,52 @@ fun PromptDetailScreen(
         parameters = { parametersOf(categoryId) }
     ),
     onBackClick: () -> Unit,
+    onSubScribeClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val clipboardManager = LocalClipboardManager.current
-
+    var sharePrompt by remember {
+        mutableStateOf<Prompt?>(null)
+    }
+    var shareCardReady by remember {
+        mutableStateOf(false)
+    }
+    val graphicsLayer = rememberGraphicsLayer()
     // 2. Get our custom KMP App Launcher
     val appLauncher = rememberExternalAppLauncher()
-
-    // 1. Initialize the feed based on the clicked prompt
+    val shareManager = remember {
+        ShareManager()
+    }
     LaunchedEffect(promptId) {
         viewModel.initializeFeed(clickedPromptId = promptId)
     }
+
+    LaunchedEffect(
+        sharePrompt,
+        shareCardReady
+    ) {
+
+        if (
+            sharePrompt != null &&
+            shareCardReady
+        ) {
+
+            delay(500)
+
+            val imageBitmap =
+                graphicsLayer.toImageBitmap()
+
+            shareManager.sharePrompt(
+                imageBitmap
+            )
+
+            sharePrompt = null
+
+            shareCardReady = false
+        }
+    }
+
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -156,6 +208,9 @@ fun PromptDetailScreen(
                                         viewModel.onPlayClick(currentPrompt.id)
                                     },
                                     isPlaying = isFocused,
+                                    onShareClick = {
+                                        sharePrompt = currentPrompt
+                                    }
                                 )
                             }
 
@@ -166,12 +221,16 @@ fun PromptDetailScreen(
                                 CosmicGate(
                                     isPremium = currentPrompt.isPremium,
                                     isPro = uiState.isProUser,
+                                    isAdLoading =
+                                        uiState.rewardedAdState is RewardedAdState.Loading,
                                     isRevealed = uiState.revealedPrompts.contains(currentPrompt.id),
                                     onRevealClick = {
-                                        viewModel.revealPrompt(currentPrompt.id)
+                                        viewModel.revealPrompt(
+                                            currentPrompt.id
+                                        )
                                     },
                                     onSubscribeClick = {
-                                        // navigate to subscription
+                                       onSubScribeClick()
                                     }
                                 ) {
 
@@ -201,6 +260,12 @@ fun PromptDetailScreen(
                                         PromptContentCard(
                                             prompt = currentPrompt.content.promptText
                                         )
+
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        PromptInstructionCard(
+                                            text = currentPrompt.content.description.toString()
+                                        )
+
                                     }
                                 }
                             }
@@ -218,6 +283,66 @@ fun PromptDetailScreen(
 
 
                 }
+            }
+
+
+        }
+
+        sharePrompt?.let { prompt ->
+            val mediaUi = remember(prompt.media) {
+                when (val media = prompt.media) {
+                    is FeedMedia.Image -> FeedMediaUi.Image(media.imageUrl, media.aspectRatio)
+                    is FeedMedia.Video -> FeedMediaUi.Video(
+                        videoUrl = media.videoUrl,
+                        thumbnailUrl = media.thumbnailUrl,
+                        durationText = media.durationMs.toString(),
+                        aspectRatio = media.aspectRatio
+                    )
+                    else -> error("Unsupported media type")
+                }
+            }
+
+            val imageUrl = when (mediaUi) {
+
+                is FeedMediaUi.Image -> {
+                    mediaUi.imageUrl
+                }
+
+                is FeedMediaUi.Video -> {
+                    mediaUi.thumbnailUrl
+                }
+            }
+
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Transparent)
+                   
+            ) {
+
+                PromptShareCard(
+                    data = SharePromptUi(
+                        username = "Gurujeet",
+                        promptTitle = prompt.content.title.orEmpty(),
+                        imageUrl = imageUrl.orEmpty(),
+                        appLink = "https://play.google.com/store/apps/details?id=ai.achaialabs.helios"
+                    ),
+
+                    onImageLoaded = {
+
+                        shareCardReady = true
+                    },
+                    modifier = Modifier
+                        // THIS is where the capture magic happens.
+                        // Now it only captures the exact dimensions of the square card!
+                        .drawWithContent {
+                            graphicsLayer.record {
+                                this@drawWithContent.drawContent()
+                            }
+                            drawLayer(graphicsLayer)
+                        }
+                )
             }
         }
     }
@@ -243,7 +368,7 @@ fun EndOfUniverseCard() {
 
         Text(
             text = "You've reached the edge.",
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center

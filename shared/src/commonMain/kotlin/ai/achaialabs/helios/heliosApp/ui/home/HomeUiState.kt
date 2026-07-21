@@ -1,5 +1,6 @@
 package ai.achaialabs.helios.heliosApp.ui.home
 
+import ai.achaialabs.helios.heliosApp.ad.NativeAdState
 import ai.achaialabs.helios.heliosApp.ui.model.HomeHeroUi
 import ai.achaialabs.helios.heliosApp.ui.model.PromptUi
 import ai.achaialabs.helios.heliosApp.ui.model.UserUi
@@ -11,5 +12,7 @@ data class HomeUiState(
     val heroes: List<HomeHeroUi> = emptyList(),
     val currentUser: UserUi? = null,
     val activeVideoId: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val nativeAdState: NativeAdState =
+        NativeAdState.Idle,
 )

@@ -1,5 +1,7 @@
 package ai.achaialabs.helios.heliosApp.ui.home.components
 
+import ai.achaialabs.helios.heliosApp.ad.NativeAdCard
+import ai.achaialabs.helios.heliosApp.ad.NativeAdState
 import ai.achaialabs.helios.heliosApp.ui.CosmicLottieLoader
 import ai.achaialabs.helios.heliosApp.ui.home.HomeUiState
 import androidx.compose.animation.AnimatedContent
@@ -17,7 +19,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -93,63 +97,95 @@ fun HomeScreenContent(
             Spacer(Modifier.height(20.dp))
         }
 
-        items(
-            uiState.prompts.chunked(2)
-        ) { rowItems ->
+        val chunkedPrompts = uiState.prompts.chunked(2)
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+        itemsIndexed(chunkedPrompts) { index, rowItems ->
 
-                horizontalArrangement =
-                    Arrangement.spacedBy(12.dp)
-            ) {
+            Column {
 
-                rowItems.forEach { prompt ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
 
-                    PromptCard(
+                    horizontalArrangement =
+                        Arrangement.spacedBy(12.dp)
+                ) {
 
-                        prompt = prompt,
+                    rowItems.forEach { prompt ->
 
-                        modifier =
-                            Modifier.weight(1f),
+                        PromptCard(
 
-                        isPlaying =
-                            uiState.activeVideoId ==
-                                    prompt.id,
+                            prompt = prompt,
 
-                        onPlayClick = {
-                            onPlayClick(prompt.id)
-                        },
+                            modifier =
+                                Modifier.weight(1f),
 
-                        onCardClick = {
-                            onPromptClick(prompt.id)
-                        },
+                            isPlaying =
+                                uiState.activeVideoId ==
+                                        prompt.id,
 
-                        onLikeClick = {
-                            onLikeClick(prompt.id)
-                        },
+                            onPlayClick = {
+                                onPlayClick(prompt.id)
+                            },
 
-                        onShareClick = {
-                            onShareClick(prompt.id)
-                        }
-                    )
+                            onCardClick = {
+                                onPromptClick(prompt.id)
+                            },
+
+                            onLikeClick = {
+                                onLikeClick(prompt.id)
+                            },
+
+                            onShareClick = {
+                                onShareClick(prompt.id)
+                            }
+                        )
+                    }
+
+                    if (rowItems.size == 1) {
+
+                        Spacer(
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
 
-                if(rowItems.size == 1) {
+                // SHOW AD AFTER EVERY 4 PROMPTS
+                // each row = 2 prompts
+                // every 2 rows = 4 prompts
+
+                val shouldShowAd =
+                    index != 0 &&
+                            index % 2 == 1
+
+                if (
+                    shouldShowAd &&
+                    uiState.nativeAdState is NativeAdState.Loaded
+                ) {
 
                     Spacer(
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.height(4.dp)
+                    )
+
+                    NativeAdCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(4.dp)
                     )
                 }
+
+
+                Spacer(Modifier.height(12.dp))
             }
-
-            Spacer(Modifier.height(12.dp))
         }
-
     }
 }
+
 
 
 @Composable

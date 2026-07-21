@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.androidApplication)
@@ -17,6 +18,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
 
     implementation(libs.compose.uiToolingPreview)
+    implementation(libs.play.services.ads.api)
     debugImplementation(libs.compose.uiTooling)
 }
 
@@ -28,8 +30,18 @@ android {
         applicationId = "ai.achaialabs.helios"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 6
+        versionName = "1.0.3"
+
+        val localProperties = Properties()
+        val localFile = rootProject.file("local.properties")
+
+        if (localFile.exists()) {
+            localProperties.load(localFile.inputStream())
+        }
+
+        manifestPlaceholders["ADMOB_APP_ID"] =
+            localProperties.getProperty("ADMOB_APP_ID") ?: ""
     }
     packaging {
         resources {
@@ -38,8 +50,17 @@ android {
     }
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+
+            proguardFiles(
+                getDefaultProguardFile(
+                    "proguard-android-optimize.txt"
+                ),
+                "proguard-rules.pro"
+            )
         }
+
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

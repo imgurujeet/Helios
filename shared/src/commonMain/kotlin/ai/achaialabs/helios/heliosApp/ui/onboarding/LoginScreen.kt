@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -60,8 +61,6 @@ fun LoginScreen(
     LoginScreenContent(
         uiState = uiState,
         onGoogleSignIn = { action.startFlow() },
-        onPrivacyClick = {  },
-        onTermsClick = {  }
     )
 
     LaunchedEffect(uiState) {
@@ -80,13 +79,12 @@ fun LoginScreen(
 fun LoginScreenContent(
     uiState: LoginUiState,
     onGoogleSignIn: () -> Unit,
-    onPrivacyClick: () -> Unit,
-    onTermsClick: () -> Unit
 ) {
 
     val infiniteTransition = rememberInfiniteTransition(label = "space")
 
     val darkTheme = isSystemInDarkTheme()
+    val uriHandler = LocalUriHandler.current
 
     val nebulaOffset by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -241,7 +239,7 @@ fun LoginScreenContent(
                     color = MaterialTheme.colorScheme.onBackground,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.clickable {
-                        onTermsClick()
+                        uriHandler.openUri("https://heliosai.achaialabs.tech/terms")
                     }
                 )
 
@@ -255,7 +253,7 @@ fun LoginScreenContent(
                     color = MaterialTheme.colorScheme.onBackground,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.clickable {
-                        onPrivacyClick()
+                        uriHandler.openUri("https://heliosai.achaialabs.tech/privacy")
                     }
                 )
             }

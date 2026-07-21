@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -60,7 +61,9 @@ fun ExploreScreen(
 ) {
 
 
+
     val uiState by viewModel.uiState.collectAsState()
+    val isPremium by viewModel.isPremium.collectAsStateWithLifecycle()
     val scrollBehavior =
         TopAppBarDefaults.enterAlwaysScrollBehavior()
     val listState = rememberLazyListState()
@@ -75,6 +78,7 @@ fun ExploreScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             ExploreHeader(
+                isPremium= isPremium,
                 onUnlockPremiumClick = onUnlockPremiumClick,
                 scrollBehavior = scrollBehavior
             )

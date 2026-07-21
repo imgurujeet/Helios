@@ -15,7 +15,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [PromptEntity::class, HomeHeroEntity::class, UserEntity::class, CategoryEntity::class, ToolEntity::class],
-    version = 8
+    version = 10
 )
 abstract class PromptDatabase : RoomDatabase() {
     abstract fun promptDao(): PromptDao

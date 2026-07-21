@@ -1,5 +1,6 @@
 package ai.achaialabs.helios.heliosApp.di
 
+import ai.achaialabs.helios.BuildKonfig
 import ai.achaialabs.helios.heliosApp.core.network.createSupabaseClient
 import ai.achaialabs.helios.heliosApp.data.local.database.PromptDatabase
 import ai.achaialabs.helios.heliosApp.data.local.database.getDatabase
@@ -24,25 +25,32 @@ import ai.achaialabs.helios.heliosApp.domain.usecase.auth.*
 import ai.achaialabs.helios.heliosApp.domain.usecase.explore.ObserveExploreFeedUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.explore.SyncExploreFeedUseCase
 import ai.achaialabs.helios.heliosApp.app.MainViewModel
+import ai.achaialabs.helios.heliosApp.data.local.ThemePreferences
 import ai.achaialabs.helios.heliosApp.data.remote.service.SubscriptionManager
 import ai.achaialabs.helios.heliosApp.domain.usecase.viewall.ObservePromptsByCategoryUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.viewall.SyncPromptsByCategoryUseCase
 import ai.achaialabs.helios.heliosApp.ui.explore.ExploreViewModel
+import ai.achaialabs.helios.heliosApp.ui.favourite.FavouriteViewModel
 import ai.achaialabs.helios.heliosApp.ui.home.HomeViewModel
 import ai.achaialabs.helios.heliosApp.ui.onboarding.LoginViewModel
 import ai.achaialabs.helios.heliosApp.ui.profile.ProfileViewModel
 import ai.achaialabs.helios.heliosApp.ui.promptDetail.PromptDetailViewModel
+import ai.achaialabs.helios.heliosApp.ui.search.SearchViewModel
 import ai.achaialabs.helios.heliosApp.ui.viewall.ViewAllViewModel
 import androidx.navigation3.runtime.NavKey
+import com.revenuecat.purchases.kmp.Purchases
+import com.revenuecat.purchases.kmp.PurchasesConfiguration
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import org.koin.plugin.module.dsl.viewModel
 import kotlin.coroutines.EmptyCoroutineContext.get
 
 val appModule = module {
+
+
     // Supabase
     single { createSupabaseClient() }
-
+    single { ThemePreferences(get()) }
     // Database
     single { getDatabaseBuilder() }
     single { getDatabase(get()) }
@@ -52,7 +60,13 @@ val appModule = module {
     single { get<PromptDatabase>().exploreDao() }
     single { get<PromptDatabase>().toolDao() }
 
-    single { SubscriptionManager(get()) }
+    single {
+        if (!Purchases.isConfigured) {
+            Purchases.configure(
+                PurchasesConfiguration.Builder(BuildKonfig.REVENUECAT_API_KEY).build()
+            )
+        }
+        SubscriptionManager(get()) }
 
     // Local Data Sources
     single<PromptLocalDataSource> { PromptLocalDataSourceImpl(get()) }
@@ -74,6 +88,7 @@ val appModule = module {
             get(),
             get(),
             get(),
+            get()
         )
     }
     single<AuthRepository> {
@@ -118,17 +133,27 @@ val appModule = module {
     factory {
         SyncToolsUseCase(get())
     }
+    factory {
+        SearchPromptsUseCase(get())
+    }
+    factory {
+        GetLikedPromptsUseCase(get())
+    }
+    factory {
+        GetPremiumStatusUseCase(get())
+    }
 
     // ViewModels
     viewModel {
-        HomeViewModel(get(), get(), get(), get(),get(),get(),get())
+        HomeViewModel(get(), get(), get(), get(),get(),get(),get(),get())
     }
+
     viewModel {
         LoginViewModel(get(), get())
     }
 
     viewModel {
-        ExploreViewModel(get(), get())
+        ExploreViewModel(get(), get(), get())
     }
     viewModel { (id: String, name: String) ->
         ViewAllViewModel(
@@ -149,15 +174,24 @@ val appModule = module {
             syncToolsUseCase = get(),
             toggleLikeUseCase = get(),
             toggleBookmarkUseCase = get(),
-            getCurrentUserUseCase = get()
+            getCurrentUserUseCase = get(),
+            adManager = get()
         )
     }
 
     viewModel{
-        ProfileViewModel(get(), get(), get(), get())
+        ProfileViewModel(get(), get(), get(), get(),get())
     }
 
     viewModel {
-        MainViewModel(get(), get(), get(), get())
+        MainViewModel(get(), get(), get(), get(),get(),get())
+    }
+
+
+    viewModel{
+        SearchViewModel(get())
+    }
+    viewModel {
+        FavouriteViewModel(get(), get())
     }
 }

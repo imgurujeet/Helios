@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Chat
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -49,6 +50,7 @@ fun CosmicGate(
     isPremium: Boolean,
     isPro: Boolean,
     isRevealed: Boolean,
+    isAdLoading: Boolean = false,
     onRevealClick: () -> Unit,
     onSubscribeClick: () -> Unit,
     content: @Composable () -> Unit
@@ -162,6 +164,8 @@ fun CosmicGate(
 
 
                     Button(
+                        enabled = !isAdLoading,
+
                         onClick = {
                             if (isPremium) {
                                 onSubscribeClick()
@@ -176,7 +180,11 @@ fun CosmicGate(
                         shape = RoundedCornerShape(14.dp)
                     ) {
 
-                        Text(buttonText)
+                        if (isAdLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text(buttonText)
+                        }
 
                         Spacer(modifier = Modifier.width(8.dp))
 

@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,7 +45,7 @@ private data class StarParticle(val x: Float, val y: Float, val radius: Float, v
 
 @Composable
 @Preview
-fun ProCard(modifier: Modifier = Modifier) {
+fun ProCard(modifier: Modifier = Modifier,onUpgradeClick: () -> Unit = {}) {
 
     // Generate random star dust particles just once using remember
     val starCount = 45
@@ -60,7 +61,9 @@ fun ProCard(modifier: Modifier = Modifier) {
     }
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().clickable(){
+            onUpgradeClick()
+        },
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f)
@@ -167,11 +170,6 @@ fun ProCard(modifier: Modifier = Modifier) {
                     )
                 }
 
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = heliosGold.copy(alpha = 0.8f)
-                )
             }
         }
     }

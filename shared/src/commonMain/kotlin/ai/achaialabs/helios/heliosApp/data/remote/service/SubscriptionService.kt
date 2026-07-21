@@ -13,16 +13,32 @@ class SubscriptionManager(
 ) {
     suspend fun syncSubscriptionStatus() {
         try {
-            val customerInfo = getCustomerInfoSuspend()
-            // Access the 'pro' entitlement safely
-            val isPro = customerInfo.entitlements.active["pro"] != null
 
+            val customerInfo = getCustomerInfoSuspend()
+
+            val isPro =
+                customerInfo.entitlements["Helios Pro"]?.isActive == true
+
+
+            //println("RC APP USER ID: ${Purchases.sharedInstance.appUserID}")
+
+//            println(
+//                "ACTIVE ENTITLEMENTS: ${
+//                    customerInfo.entitlements.active.keys
+//                }"
+//            )
+//
+//            println(
+//                "IS PRO: ${
+//                    customerInfo.entitlements["pro"]?.isActive
+//                }"
+//            )
             authRepository.updateProStatus(isPro)
+
         } catch (e: Exception) {
-            println("RevenueCat sync error: ${e.message}")
+            e.printStackTrace()
         }
     }
-
     // Bridge for RevenueCat's callback-based API
     private suspend fun getCustomerInfoSuspend(): CustomerInfo = suspendCancellableCoroutine { continuation ->
         Purchases.sharedInstance.getCustomerInfo(

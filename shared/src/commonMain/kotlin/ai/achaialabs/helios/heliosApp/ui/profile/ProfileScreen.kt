@@ -1,12 +1,19 @@
 package ai.achaialabs.helios.heliosApp.ui.profile
 
+import ai.achaialabs.helios.heliosApp.app.MainViewModel
+import ai.achaialabs.helios.heliosApp.ui.components.LicensesScreen
 import ai.achaialabs.helios.heliosApp.ui.model.UserUi
+import ai.achaialabs.helios.heliosApp.ui.navigation.ChromeState
+import ai.achaialabs.helios.heliosApp.ui.navigation.Favourite
+import ai.achaialabs.helios.heliosApp.ui.profile.components.FeedbackDialog
+import ai.achaialabs.helios.heliosApp.ui.profile.components.HeliosDialog
 import ai.achaialabs.helios.heliosApp.ui.profile.components.LogoutDialog
 import ai.achaialabs.helios.heliosApp.ui.profile.components.ProCard
 import ai.achaialabs.helios.heliosApp.ui.profile.components.ProfileCard
 import ai.achaialabs.helios.heliosApp.ui.profile.components.RequestPromptDialog
 import ai.achaialabs.helios.heliosApp.ui.profile.components.SettingsItem
 import ai.achaialabs.helios.heliosApp.ui.profile.components.ThemeSelectionDialog
+import ai.achaialabs.helios.heliosApp.utils.getAppVersion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -16,6 +23,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -52,6 +60,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,10 +75,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.jetbrains.compose.resources.painterResource
-import helios.shared.generated.resources.Res
-import helios.shared.generated.resources.ic_google
-import helios.shared.generated.resources.ic_star_orbit
+import androidx.compose.ui.platform.LocalUriHandler
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 
@@ -77,16 +84,25 @@ val heliosOrange = Color(0xF0D55900)
 val heliosGold = Color(0xFFF59E0B)
 
 enum class ProfileDialogType {
-    NONE, THEME, REQUEST_PROMPT, LOGOUT
+    NONE, THEME, REQUEST_PROMPT, LOGOUT,FEEDBACK,LICENSES
 }
 @Composable
 fun ProfileScreen(
+    chromeState: ChromeState,
     viewModel: ProfileViewModel = koinViewModel(),
+    mainViewModel: MainViewModel = koinInject(),
+    onUpgradeClick: () -> Unit,
     onLogout: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var activeDialog by remember { mutableStateOf(ProfileDialogType.NONE) }
-    val isDarkMode = isSystemInDarkTheme()
+    val uriHandler = LocalUriHandler.current
+
+    val userThemePreference by mainViewModel.isDarkTheme.collectAsState()
+    val systemTheme = isSystemInDarkTheme()
+
+    val isDarkMode = userThemePreference ?: systemTheme
+    val isPro by viewModel.isPremium.collectAsStateWithLifecycle()
 
     when (activeDialog) {
         ProfileDialogType.LOGOUT -> {
@@ -104,18 +120,51 @@ fun ProfileScreen(
                 currentIsDark = isDarkMode,
                 onDismiss = { activeDialog = ProfileDialogType.NONE },
                 onThemeSelected = { selectedDark ->
-                   // isDarkMode = selectedDark
-                    // Trigger any global theme changes here
+                    activeDialog = ProfileDialogType.NONE // Close dialog
+                    mainViewModel.setDarkTheme(selectedDark)
+
                 }
             )
         }
         ProfileDialogType.REQUEST_PROMPT -> {
+
             RequestPromptDialog(
                 onDismiss = { activeDialog = ProfileDialogType.NONE },
                 onSubmit = { name, message ->
-                    // Handle opening your email client here
+                    activeDialog = ProfileDialogType.NONE
+                    val uri = viewModel.getEmailSupportData(
+                        type = ProfileViewModel.SupportType.REQUEST_PROMPT,
+                        subject = "Prompt Request from $name",
+                        body = message
+                    )
+                    uriHandler.openUri(uri)
                 }
             )
+        }
+
+        ProfileDialogType.FEEDBACK -> {
+            val uriHandler = LocalUriHandler.current
+            FeedbackDialog(
+                onDismiss = { activeDialog = ProfileDialogType.NONE },
+                onSubmit = { category, comment ->
+                    activeDialog = ProfileDialogType.NONE
+                    val uri = viewModel.getEmailSupportData(
+                        type = ProfileViewModel.SupportType.FEEDBACK,
+                        subject = "Feedback: $category",
+                        body = comment
+                    )
+                    uriHandler.openUri(uri)
+                }
+            )
+        }
+
+        ProfileDialogType.LICENSES -> {
+            HeliosDialog(
+                title = "Licenses & Credits",
+                onDismiss = { activeDialog = ProfileDialogType.NONE },
+            ) {
+                LicensesScreen(onDismiss = { activeDialog = ProfileDialogType.NONE })
+            }
         }
         ProfileDialogType.NONE -> {}
     }
@@ -125,18 +174,38 @@ fun ProfileScreen(
     ) { paddingValues ->
         ProfileScreenContent(
             user = uiState.user,
+            isPro = isPro,
             onLogout = { activeDialog = ProfileDialogType.LOGOUT },
             onThemeClick = { activeDialog = ProfileDialogType.THEME },
-            onSavedClick = {},
-            onRequestPromptClick = {},
-            onVideoGalaxyClick = {},
+            onSavedClick = {
+                chromeState.navigateTo(Favourite)
+            },
+            onRequestPromptClick = {
+                activeDialog = ProfileDialogType.REQUEST_PROMPT
+            },
+            onVideoGalaxyClick = {
+
+            },
             onRateClick = {},
-            onHelpClick = {},
-            onTermsClick = {},
-            onPrivacyClick = {},
-            onAboutClick = {},
-            onDeveloperClick = {},
-            onUpgradeClick = {},
+            onHelpClick = {
+                activeDialog = ProfileDialogType.FEEDBACK
+            },
+            onTermsClick = {
+                uriHandler.openUri("https://heliosai.achaialabs.tech/terms")
+            },
+            onPrivacyClick = {
+                uriHandler.openUri("https://heliosai.achaialabs.tech/privacy")
+            },
+            onAboutClick = {
+                activeDialog = ProfileDialogType.LICENSES
+            },
+            onDeveloperClick = {
+                val uri = viewModel.getDeveloperInquiryUri()
+                uriHandler.openUri(uri)
+            },
+            onUpgradeClick = {
+                onUpgradeClick()
+            },
             padding = paddingValues
         )
     }
@@ -149,6 +218,7 @@ fun ProfileScreen(
 @Composable
 fun ProfileScreenContent(
     user: UserUi? = null,
+    isPro: Boolean,
     onLogout: () -> Unit,
     onThemeClick: () -> Unit,
     onSavedClick: () -> Unit,
@@ -214,8 +284,10 @@ fun ProfileScreenContent(
         Spacer(modifier = Modifier.height(22.dp))
 
         // Pro Card
-        if (user?.isPro == false){
-            ProCard()
+        if (!isPro){
+            ProCard(
+                onUpgradeClick = onUpgradeClick
+            )
         }
 
         Spacer(modifier = Modifier.height(22.dp))
@@ -229,29 +301,37 @@ fun ProfileScreenContent(
             icon = Icons.Rounded.DarkMode,
             title = "Theme",
             subtitle = "Switch between dark and light mode",
-            onClick = {}
+            onClick = {
+                onThemeClick()
+            }
         )
 
         SettingsItem(
             icon = Icons.Rounded.Bookmark,
             title = "Saved Prompts",
             subtitle = "Your collected inspirations",
-            onClick = {}
+            onClick = {
+                onSavedClick()
+            }
         )
 
         SettingsItem(
             icon = Icons.Rounded.Explore,
             title = "Request Prompt",
             subtitle = "Suggest prompts for the community",
-            onClick = {}
+            onClick = {
+                onRequestPromptClick()
+            }
         )
 
-        SettingsItem(
-            icon = Icons.Rounded.VideoLibrary,
-            title = "Video Galaxy",
-            subtitle = "Explore cinematic AI video prompts",
-            onClick = {}
-        )
+//        SettingsItem(
+//            icon = Icons.Rounded.VideoLibrary,
+//            title = "Video Galaxy",
+//            subtitle = "Explore cinematic AI video prompts",
+//            onClick = {
+//                onVideoGalaxyClick()
+//            }
+//        )
 
         Spacer(modifier = Modifier.height(22.dp))
 
@@ -264,43 +344,74 @@ fun ProfileScreenContent(
             icon = Icons.Rounded.Star,
             title = "Rate Helios",
             subtitle = "Support us on the Play Store",
-            onClick = {}
+            onClick = {
+                onRateClick()
+            }
         )
 
         SettingsItem(
             icon = Icons.Rounded.Feedback,
             title = "Help & Feedback",
             subtitle = "Report bugs or share ideas",
-            onClick = {}
+            onClick = {
+                onHelpClick()
+            }
         )
 
         SettingsItem(
             icon = Icons.Rounded.Description,
             title = "Terms of Use",
             subtitle = "Read our terms and conditions",
-            onClick = {}
+            onClick = {
+                onTermsClick()
+            }
         )
 
         SettingsItem(
             icon = Icons.Rounded.PrivacyTip,
             title = "Privacy Policy",
             subtitle = "Learn how we handle your data",
-            onClick = {}
+            onClick = {
+                onPrivacyClick()
+            }
         )
 
         SettingsItem(
             icon = Icons.Rounded.Info,
             title = "About",
             subtitle = "Version, credits and libraries",
-            onClick = {}
+            onClick = {
+                onAboutClick()
+            }
         )
 
         SettingsItem(
             icon = Icons.Rounded.Code,
             title = "Looking for a Developer?",
             subtitle = "Build your next idea with Achaia Labs",
-            onClick = {}
+            onClick = {
+                onDeveloperClick()
+            }
         )
+
+        Spacer(modifier = Modifier.height(20.dp))
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "version: ${getAppVersion()}",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    letterSpacing = 1.6.sp,
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+
+            )
+
+        }
+
+
 
 
         Spacer(modifier = Modifier.height(85.dp))
@@ -321,7 +432,7 @@ fun ProfileSectionTitle(
             letterSpacing = 1.6.sp,
             fontWeight = FontWeight.SemiBold
         ),
-        color = Color.White.copy(alpha = 0.4f)
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
     )
 }
 

@@ -13,6 +13,8 @@ val navConfig = SavedStateConfiguration {
             subclass(Profile::class, Profile.serializer())
             subclass(PromptDetail::class, PromptDetail.serializer())
             subclass(ViewAll::class, ViewAll.serializer())
+            subclass(Search::class, Search.serializer())
+            subclass(Favourite::class, Favourite.serializer())
 
         }
     }

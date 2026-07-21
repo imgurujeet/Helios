@@ -13,7 +13,7 @@ coilNetworkKtor3 = "3.4.0"
 composeMultiplatform = "1.11.0"
 datastorePreferencesCore = "1.2.1"
 junit = "4.13.2"
-kotlin = "2.3.21"
+kotlin = "2.4.0"
 ktorClientAndroid = "3.5.0"
 kotlinx-coroutines = "1.11.0"
 material3 = "1.11.0-alpha07"
@@ -25,18 +25,33 @@ compose-multiplatform-lifecycle = "2.10.0-alpha05"
 coilCompose = "3.4.0"
 ksp = "2.3.6"
 koin = "4.2.1"
+okio = "3.17.0"
+pagingCommon = "3.3.0-alpha02-0.5.1"
+pagingCommonVersion = "3.5.0"
+playServicesAds = "25.3.0"
 room = "2.8.4"
 kotlinxDatetime = "0.8.0"
 sqlite = "2.6.2"
 compottie = "2.0.0"
 supabase = "3.6.0"
 revenuecat-kmp = "3.0.3"
+aboutlibraries = "14.2.1"
+buildKonfig = "0.21.2"
+playServicesAdsApi = "25.3.0"
+
 
 
 [libraries]
 androidx-datastore-preferences-core = { module = "androidx.datastore:datastore-preferences-core", version.ref = "datastorePreferencesCore" }
+androidx-paging-common = { module = "androidx.paging:paging-common", version.ref = "pagingCommonVersion" }
 coil-kt-coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coilNetworkKtor3" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coilNetworkKtor3" }
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+paging-common = { module = "app.cash.paging:paging-common", version.ref = "pagingCommon" }
+paging-compose-common = { module = "app.cash.paging:paging-compose-common", version.ref = "pagingCommon" }
+play-services-ads = { module = "com.google.android.gms:play-services-ads", version.ref = "playServicesAds" }
+skiko = { module = "org.jetbrains.skiko:skiko" }
 supabase-bom = { module = "io.github.jan-tennert.supabase:bom", version.ref = "supabase" }
 supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt", version.ref = "supabase" }
 supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt", version.ref = "supabase" }
@@ -84,13 +99,16 @@ ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negoti
 ktor-serialization-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktorClientAndroid" }
 
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+androidx-room-paging = { module = "androidx.room:room-paging", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }
+aboutlibraries-compose-m3 = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutlibraries" }
 
 #revenuecat
 revenuecat-core = { module = "com.revenuecat.purchases:purchases-kmp-core", version.ref = "revenuecat-kmp" }
 revenuecat-ui = { module = "com.revenuecat.purchases:purchases-kmp-ui", version.ref = "revenuecat-kmp" }
+play-services-ads-api = { group = "com.google.android.gms", name = "play-services-ads-api", version.ref = "playServicesAdsApi" }
 
 
 [plugins]
@@ -102,3 +120,5 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 androidx-room = { id = "androidx.room", version.ref = "room" }
+aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "aboutlibraries" }
+buildkonfig = { id = "com.codingfeline.buildkonfig", version.ref = "buildKonfig" }

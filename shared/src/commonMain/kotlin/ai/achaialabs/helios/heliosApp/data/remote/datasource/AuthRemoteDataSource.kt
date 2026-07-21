@@ -32,10 +32,7 @@ class AuthRemoteDataSourceImpl(
     override suspend fun getCurrentUser(): Result<User> {
         return try {
             val userInfo = supabaseClient.auth.retrieveUserForCurrentSession()
-            println(
-                "USER META = ${userInfo.userMetadata}"
-            )
-            println("DEBUG: Fetching profile for ID: ${userInfo.id}")
+
             val profile = supabaseClient
                 .from("profiles")
                 .select {
@@ -74,7 +71,6 @@ class AuthRemoteDataSourceImpl(
                 )
             )
         } catch (e: Exception) {
-            println("DEBUG: CRITICAL ERROR IN FETCH: ${e.stackTraceToString()}")
             Result.failure(e)
         }
     }

@@ -38,11 +38,8 @@ class PromptRemoteDataSourceImpl(
             }
             .decodeList<PromptApiResponse>()
 
-        // 🚨 2. ADD LOGS HERE to check the raw data
-        println("NETWORK CHECK: Supabase returned ${apiResponse.size} items.")
-        if (apiResponse.isNotEmpty()) {
-            println("NETWORK CHECK: The tool data for the Last item is: ${apiResponse.last().tool}")
-        }
+
+
 
         // 3. Finally, map it and return it
         return apiResponse.map { it.toPromptDto() }
@@ -80,7 +77,7 @@ class PromptRemoteDataSourceImpl(
             .map { it.toHomeHeroDto() }
     }
 
-    // 🚀 SCALABLE APPROACH: Let the Database handle the logic atomically
+    //  SCALABLE APPROACH: Let the Database handle the logic atomically
     override suspend fun toggleLike(promptId: String): Boolean {
         return try {
             supabaseClient.postgrest.rpc(
@@ -94,7 +91,7 @@ class PromptRemoteDataSourceImpl(
         }
     }
 
-    // 🚀 SCALABLE APPROACH: Let the Database handle the logic atomically
+    //  SCALABLE APPROACH: Let the Database handle the logic atomically
     override suspend fun toggleBookmark(promptId: String): Boolean {
         return try {
             supabaseClient.postgrest.rpc(

@@ -16,5 +16,12 @@ data object Profile : NavKey
 @Serializable
 data class ViewAll(val categoryId: String, val categoryName: String) : NavKey
 
+
+@Serializable
+data object Search : NavKey
+
 @Serializable
 data class PromptDetail(val promptId: String,val categoryId: String? = null) : NavKey
+
+@Serializable
+data object Favourite : NavKey

@@ -1,6 +1,7 @@
 package ai.achaialabs.helios.heliosApp.ui.explore
 
 
+import ai.achaialabs.helios.heliosApp.domain.usecase.GetPremiumStatusUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.explore.ObserveExploreFeedUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.explore.SyncExploreFeedUseCase
 import ai.achaialabs.helios.heliosApp.ui.mapper.toUi
@@ -19,7 +20,8 @@ data class ExploreUiState(
 
 class ExploreViewModel(
     private val observeExploreFeedUseCase: ObserveExploreFeedUseCase,
-    private val syncExploreFeedUseCase: SyncExploreFeedUseCase
+    private val syncExploreFeedUseCase: SyncExploreFeedUseCase,
+    private val getPremiumStatusUseCase: GetPremiumStatusUseCase
 ) : ViewModel() {
 
     // Pagination trackers
@@ -30,6 +32,13 @@ class ExploreViewModel(
 
     private val _uiState = MutableStateFlow(ExploreUiState())
     val uiState = _uiState.asStateFlow()
+
+    val isPremium: StateFlow<Boolean> = getPremiumStatusUseCase()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
 
     init {
         setupOfflineFirstObservation()

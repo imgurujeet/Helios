@@ -28,6 +28,7 @@ import helios.shared.generated.resources.ic_star_orbit
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreHeader(
+    isPremium: Boolean,
     onUnlockPremiumClick: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior
 ) {
@@ -44,7 +45,7 @@ fun ExploreHeader(
         },
 
         actions = {
-
+            if (!isPremium) {
             Row(
                 modifier = Modifier
                     .padding(end = 12.dp)
@@ -67,12 +68,13 @@ fun ExploreHeader(
                         .padding(end = 6.dp)
                 )
 
-                Text(
+               Text(
                     text = "Unlock Pro",
                     color = MaterialTheme.colorScheme.surface,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
-                )
+               )
+               }
             }
         },
 
