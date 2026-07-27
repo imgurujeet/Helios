@@ -9,6 +9,7 @@ import ai.achaialabs.helios.heliosApp.data.remote.mapper.toPromptDto
 import ai.achaialabs.helios.heliosApp.domain.model.ExploreCategory
 import ai.achaialabs.helios.heliosApp.domain.model.Prompt
 import ai.achaialabs.helios.heliosApp.domain.repository.ExploreRepository
+import ai.achaialabs.helios.heliosApp.firebase.crashlytics.CrashlyticsService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
@@ -17,19 +18,20 @@ import kotlinx.coroutines.withContext
 
 class ExploreRepositoryImpl(
     private val remoteDataSource: ExploreRemoteDataSource,
-    private val exploreDao: ExploreDao
+    private val exploreDao: ExploreDao,
+    private val crashlytics: CrashlyticsService
 ) : ExploreRepository {
 
     // This watches the local database and streams updates to the UI
-    override fun observeExploreFeed(categoryLimit: Int): Flow<List<ExploreCategory>> {
-        return exploreDao.observeCategories(limit = categoryLimit).map { categoryEntities ->
-            categoryEntities.map { categoryEntity ->
-                // Fetch the 5 prompts for each category directly from the local DB
-                val promptEntities = exploreDao.getPromptsForCategory(categoryEntity.id)
 
+    override  fun observeExploreFeed(): Flow<List<ExploreCategory>> {
+        return exploreDao.observeCategories().map { categoriesWithPrompts ->
+            categoriesWithPrompts.map { item ->
                 ExploreCategory(
-                    category = categoryEntity.toDomain(),
-                    prompts = promptEntities.map { it.toDomain() }
+                    category = item.category.toDomain(),
+                    prompts = item.prompts
+                        .take(6) // Keep only the first 6 for the Explore screen
+                        .map { it.toDomain() }
                 )
             }
         }
@@ -57,6 +59,13 @@ class ExploreRepositoryImpl(
 
                 categoriesResult.size < limit
 
+            }.onFailure { e ->
+
+                crashlytics.log("syncExploreFeed failed")
+                crashlytics.setCustomKey("limit", limit.toString())
+                crashlytics.setCustomKey("offset", offset.toString())
+
+                crashlytics.recordException(e)
             }
 
 
@@ -75,10 +84,17 @@ class ExploreRepositoryImpl(
             // Save to Room
             exploreDao.insertPrompts(remotePrompts.map { it.toPromptDto().toEntity() })
             remotePrompts.size < limit
+        }.onFailure { e ->
+
+            crashlytics.log("syncPromptsForCategory failed")
+
+            crashlytics.setCustomKey("category_id", categoryId)
+            crashlytics.setCustomKey("limit", limit.toString())
+            crashlytics.setCustomKey("offset", offset.toString())
+
+            crashlytics.recordException(e)
         }
     }
-
-
 
 
 }

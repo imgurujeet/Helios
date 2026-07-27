@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.google.firebase.crashlytics)
 }
 
 kotlin {
@@ -13,6 +15,11 @@ kotlin {
     }
 }
 dependencies {
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.messaging)
+    implementation(libs.firebase.inappmessaging.display)
     implementation(projects.shared)
 
     implementation(libs.androidx.activity.compose)
@@ -30,8 +37,8 @@ android {
         applicationId = "ai.achaialabs.helios"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 6
-        versionName = "1.0.3"
+        versionCode = 9
+        versionName = "1.0.9"
 
         val localProperties = Properties()
         val localFile = rootProject.file("local.properties")

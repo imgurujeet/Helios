@@ -1,5 +1,6 @@
 package ai.achaialabs.helios.heliosApp.ui.profile.components
 
+import ai.achaialabs.helios.heliosApp.data.local.NavigationStyle
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -116,15 +117,71 @@ fun HeliosOptionItem(
 
 // Dialogs remain unchanged in logic, but now automatically use the updated OptionItem!
 @Composable
-fun ThemeSelectionDialog(currentIsDark: Boolean, onDismiss: () -> Unit, onThemeSelected: (Boolean) -> Unit) {
-    HeliosDialog(title = "Choose Theme", onDismiss = onDismiss) {
+fun ThemeSelectionDialog(
+    currentIsDark: Boolean,
+    currentNavigationStyle: NavigationStyle,
+    onDismiss: () -> Unit,
+    onThemeSelected: (Boolean) -> Unit,
+    onNavigationStyleSelected: (NavigationStyle) -> Unit
+) {
+    HeliosDialog(
+        title = "Appearance",
+        onDismiss = onDismiss
+    ) {
+
+        Text(
+            text = "Theme",
+            style = MaterialTheme.typography.labelLarge
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            HeliosOptionItem("Dark Mode", currentIsDark, { onThemeSelected(true); onDismiss() }, icon = Icons.Rounded.DarkMode)
-            HeliosOptionItem("Light Mode", !currentIsDark, { onThemeSelected(false); onDismiss() }, icon = Icons.Rounded.LightMode)
+
+            HeliosOptionItem(
+                title = "Dark Mode",
+                isSelected = currentIsDark,
+                onClick = { onThemeSelected(true) },
+                icon = Icons.Rounded.DarkMode
+            )
+
+            HeliosOptionItem(
+                title = "Light Mode",
+                isSelected = !currentIsDark,
+                onClick = { onThemeSelected(false) },
+                icon = Icons.Rounded.LightMode
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Navigation",
+            style = MaterialTheme.typography.labelLarge
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+            HeliosOptionItem(
+                title = "Material",
+                isSelected = currentNavigationStyle == NavigationStyle.MATERIAL,
+                onClick = {
+                    onNavigationStyleSelected(NavigationStyle.MATERIAL)
+                }
+            )
+
+            HeliosOptionItem(
+                title = "Floating",
+                isSelected = currentNavigationStyle == NavigationStyle.FLOATING,
+                onClick = {
+                    onNavigationStyleSelected(NavigationStyle.FLOATING)
+                }
+            )
         }
     }
 }
-
 @Composable
 fun LogoutDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     HeliosDialog(title = "Sign Out", subtitle = "Are you sure you want to log out?", onDismiss = onDismiss, bottomActions = {

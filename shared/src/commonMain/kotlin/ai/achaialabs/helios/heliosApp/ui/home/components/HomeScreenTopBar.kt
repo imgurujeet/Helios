@@ -10,6 +10,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -19,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -36,6 +40,7 @@ fun HomeTopBar(
     profileImageUrl: String? = null,
     onProfileClick: () -> Unit = {},
     onSearchClick: () -> Unit = {},
+    isPro: Boolean = false,
     scrollBehavior: TopAppBarScrollBehavior
 ) {
 
@@ -61,39 +66,37 @@ fun HomeTopBar(
             Box(
                 modifier = Modifier
                     .padding(start = 12.dp)
-                    .size(42.dp)
-                    .clip(CircleShape)
+                    .size(44.dp)
                     .background(
-                        Brush.radialGradient(
-                            listOf(
-                                accent.copy(alpha = 0.18f),
-                                Color.Transparent
+                        brush = if (isPro) {
+                            Brush.sweepGradient(
+                                listOf(
+                                    Color(0xFFFFD54F),
+                                    Color(0xF0EC6400),
+                                    Color(0xFFFFE082),
+                                    Color(0xF0D55900)
+                                )
                             )
-                        )
+                        } else {
+                            SolidColor(Color.Transparent)
+                        },
+                        shape = CircleShape
                     )
-                    .border(
-                        1.dp,
-                        accent.copy(alpha = 0.2f),
-                        CircleShape
-                    )
-                    .clickable {
-                        onProfileClick()
-                    },
+                    .padding(if (isPro) 2.dp else 0.dp)
+                    .clip(CircleShape)
+                    .clickable { onProfileClick() },
                 contentAlignment = Alignment.Center
             ) {
-
-                // CHANGE TO YOUR LOGO IF YOU WANT
                 AsyncImage(
-                    model = profileImageUrl ,
+                    model = profileImageUrl,
                     contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
                     contentScale = ContentScale.Crop,
                     placeholder = painterResource(Res.drawable.ic_profile),
                     error = painterResource(Res.drawable.ic_profile),
-                    fallback = painterResource(Res.drawable.ic_profile),
-                    colorFilter = if (profileImageUrl.isNullOrEmpty()) {
-                        ColorFilter.tint(MaterialTheme.colorScheme.onSurface.copy(0.8f))
-                    } else null,
-                    modifier = Modifier.fillMaxSize()
+                    fallback = painterResource(Res.drawable.ic_profile)
                 )
             }
         },
@@ -156,12 +159,12 @@ fun HomeTopBar(
             )  {
 
                 Icon(
-                    painter = painterResource(Res.drawable.ic_telescope),
+                    imageVector = Icons.Default.Search,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onBackground.copy(
                         alpha = 0.85f
                     ),
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
         },

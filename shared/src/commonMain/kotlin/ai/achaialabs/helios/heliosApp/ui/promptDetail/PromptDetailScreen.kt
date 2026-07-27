@@ -42,7 +42,9 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -82,7 +84,7 @@ val CosmicDarkBg = Color(0xFF05070B)
 val CosmicAccent = Color(0xFFF59E0B)
 val GlassBorder = Color.White.copy(alpha = 0.12f)
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PromptDetailScreen(
     categoryId: String?,
@@ -111,6 +113,10 @@ fun PromptDetailScreen(
     }
     LaunchedEffect(promptId) {
         viewModel.initializeFeed(clickedPromptId = promptId)
+    }
+
+    LaunchedEffect(promptId) {
+        viewModel.onPromptDetailOpened()
     }
 
     LaunchedEffect(
@@ -157,7 +163,7 @@ fun PromptDetailScreen(
             // 2. Wait for Room to return the prompts before rendering the Pager
             if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = CosmicAccent)
+                    CircularWavyProgressIndicator(color = CosmicAccent)
                 }
             } else if (uiState.prompts.isNotEmpty()) {
 
@@ -198,21 +204,34 @@ fun PromptDetailScreen(
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             item {
-                                HeroImageSection(
-                                    currentPrompt = currentPrompt,
-                                    modifier = Modifier
-                                        .fillParentMaxHeight(0.8f)
-                                        .fillMaxWidth(),
-                                    onLikeClick = { viewModel.onLikeClick(currentPrompt.id) },
-                                    onPlayClick = {
-                                        viewModel.onPlayClick(currentPrompt.id)
-                                    },
-                                    isPlaying = isFocused,
-                                    onShareClick = {
-                                        sharePrompt = currentPrompt
-                                    }
-                                )
+                                Column {
+                                    HeroImageSection(
+                                        currentPrompt = currentPrompt,
+                                        modifier = Modifier
+                                            .fillParentMaxHeight(0.8f)
+                                            .fillMaxWidth(),
+                                        onLikeClick = { viewModel.onLikeClick(currentPrompt.id) },
+                                        onPlayClick = {
+                                            viewModel.onPlayClick(currentPrompt.id)
+                                        },
+                                        isPlaying = isFocused,
+                                        onShareClick = {
+                                            sharePrompt = currentPrompt
+                                        }
+                                    )
+//                                    Spacer(modifier = Modifier.height(16.dp))
+//                                    Text(
+//                                        text = currentPrompt.content.title.orEmpty(),
+//                                        style = MaterialTheme.typography.titleMedium.copy(
+//                                            fontWeight = FontWeight.Bold
+//                                        ),
+//                                        color = MaterialTheme.colorScheme.onBackground,
+//                                        modifier = Modifier.padding(horizontal = 16.dp)
+//                                    )
+                                }
+
                             }
+
 
 
                             // 4. Tools pass in dynamically. Highlight updates automatically!
@@ -271,7 +290,7 @@ fun PromptDetailScreen(
                             }
 
                             item { TagsSection(currentPrompt = currentPrompt) }
-                            item { HeliosRecommendationCard() }
+                           // item { HeliosRecommendationCard() }
 
 
                         }

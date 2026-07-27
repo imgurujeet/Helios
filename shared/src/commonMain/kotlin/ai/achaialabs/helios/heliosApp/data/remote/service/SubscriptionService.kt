@@ -7,38 +7,43 @@ import com.revenuecat.purchases.kmp.models.PurchasesAreCompletedBy
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.time.Clock
 
 class SubscriptionManager(
     private val authRepository: AuthRepository
 ) {
-    suspend fun syncSubscriptionStatus() {
-        try {
+    private var lastVerification = 0L
 
-            val customerInfo = getCustomerInfoSuspend()
-
-            val isPro =
-                customerInfo.entitlements["Helios Pro"]?.isActive == true
-
-
-            //println("RC APP USER ID: ${Purchases.sharedInstance.appUserID}")
-
-//            println(
-//                "ACTIVE ENTITLEMENTS: ${
-//                    customerInfo.entitlements.active.keys
-//                }"
-//            )
-//
-//            println(
-//                "IS PRO: ${
-//                    customerInfo.entitlements["pro"]?.isActive
-//                }"
-//            )
-            authRepository.updateProStatus(isPro)
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+    companion object {
+        private const val CACHE_TIME = 30 * 60 * 1000L // 30 min
     }
+
+    suspend fun syncSubscriptionStatus(
+        force: Boolean = false
+    ) {
+
+        val now = Clock.System.now().toEpochMilliseconds()
+
+        if (!force && now - lastVerification < CACHE_TIME) {
+            println("Using cached premium status.")
+            return
+        }
+
+        lastVerification = now
+
+        val customerInfo = getCustomerInfoSuspend()
+
+        val isPro =
+            customerInfo.entitlements["Helios Pro"]?.isActive == true
+
+        authRepository.updateProStatus(isPro)
+
+
+    }
+
+
+
+
     // Bridge for RevenueCat's callback-based API
     private suspend fun getCustomerInfoSuspend(): CustomerInfo = suspendCancellableCoroutine { continuation ->
         Purchases.sharedInstance.getCustomerInfo(

@@ -1,10 +1,12 @@
 package ai.achaialabs.helios.heliosApp.app
 
 import ai.achaialabs.helios.heliosApp.ad.AdManager
-import ai.achaialabs.helios.heliosApp.data.local.ThemePreferences
+import ai.achaialabs.helios.heliosApp.data.local.AppPreference
+import ai.achaialabs.helios.heliosApp.data.local.NavigationStyle
 import ai.achaialabs.helios.heliosApp.data.remote.service.SubscriptionManager
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.IsLoggedInUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.LogoutUseCase
+import ai.achaialabs.helios.heliosApp.firebase.analytics.AnalyticsService
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revenuecat.purchases.kmp.Purchases
@@ -13,6 +15,7 @@ import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -21,18 +24,33 @@ class MainViewModel(
     private val isLoggedInUseCase: IsLoggedInUseCase,
     private val logoutUseCase: LogoutUseCase,
     private val subscriptionManager: SubscriptionManager,
-    private val themePreferences: ThemePreferences,
-    private val adManager: AdManager
+    private val appPreference: AppPreference,
+    private val adManager: AdManager,
+    private val analytics: AnalyticsService,
 ) : ViewModel() {
 
     private val _appState = MutableStateFlow<AppState>(AppState.Loading)
     val appState = _appState.asStateFlow()
 
-    val isDarkTheme = themePreferences.themeFlow.stateIn(
+    private val _shouldShowNotificationPrompt =
+        MutableStateFlow(false)
+
+    val shouldShowNotificationPrompt =
+        _shouldShowNotificationPrompt.asStateFlow()
+
+    val isDarkTheme = appPreference.themeFlow.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = null
     )
+
+    val navigationStyle = appPreference.navigationStyleFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = NavigationStyle.MATERIAL
+    )
+
+
 
     init {
         preloadAds()
@@ -75,9 +93,8 @@ class MainViewModel(
                     newAppUserID = user.id,
                     onSuccess = { _, _ ->
 
-
                         viewModelScope.launch {
-                            subscriptionManager.syncSubscriptionStatus()
+                            subscriptionManager.syncSubscriptionStatus(force = false)
                         }
                     },
                     onError = { error ->
@@ -108,8 +125,9 @@ class MainViewModel(
 
                         viewModelScope.launch {
 
-                            subscriptionManager
-                                .syncSubscriptionStatus()
+                            viewModelScope.launch {
+                                subscriptionManager.syncSubscriptionStatus(force = false)
+                            }
 
                             _appState.value =
                                 AppState.Authenticated
@@ -147,10 +165,77 @@ class MainViewModel(
         }
     }
 
+    fun refreshSubscription() {
+        viewModelScope.launch {
+            subscriptionManager.syncSubscriptionStatus(force = true)
+        }
+    }
+
+
+
     fun setDarkTheme(isDark: Boolean) {
         viewModelScope.launch {
-            // 3. ACTUALLY SAVE TO DISK
-            themePreferences.saveTheme(isDark)
+
+            if (appPreference.themeFlow.first() == isDark) return@launch
+
+            appPreference.saveTheme(isDark)
+
+            analytics.logEvent(
+                "theme_changed",
+                mapOf(
+                    "theme" to if (isDark) "dark" else "light"
+                )
+            )
+        }
+    }
+
+    fun checkNotificationPrompt(
+        permissionGranted: Boolean
+    ) {
+        viewModelScope.launch {
+
+            _shouldShowNotificationPrompt.value = false
+
+            val lastPromptTime =
+                appPreference
+                    .lastNotificationPromptTimeFlow
+                    .first()
+
+            _shouldShowNotificationPrompt.value =
+                appPreference.shouldShowPrompt(
+                    lastPromptTime = lastPromptTime,
+                    permissionGranted = permissionGranted
+                )
+        }
+    }
+    fun postponeNotificationPrompt() {
+        viewModelScope.launch {
+            appPreference.saveLastNotificationPromptTime()
+            hideNotificationPrompt()
+        }
+    }
+
+
+    fun hideNotificationPrompt() {
+        _shouldShowNotificationPrompt.value = false
+    }
+
+    fun setNavigationStyle(style: NavigationStyle) {
+        viewModelScope.launch {
+
+            val currentStyle = navigationStyle.value
+
+            if (currentStyle == style) return@launch
+
+            appPreference.saveNavigationStyle(style)
+
+            analytics.logEvent(
+                name = "navigation_style_changed",
+                params = mapOf(
+                    "navigation_style" to style.name.lowercase(),
+                    "previous_style" to currentStyle.name.lowercase()
+                )
+            )
         }
     }
 }

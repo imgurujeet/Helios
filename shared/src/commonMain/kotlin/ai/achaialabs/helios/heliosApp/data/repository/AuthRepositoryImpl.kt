@@ -6,6 +6,7 @@ import ai.achaialabs.helios.heliosApp.data.mapper.toEntity
 import ai.achaialabs.helios.heliosApp.data.remote.datasource.AuthRemoteDataSource
 import ai.achaialabs.helios.heliosApp.domain.model.User
 import ai.achaialabs.helios.heliosApp.domain.repository.AuthRepository
+import ai.achaialabs.helios.heliosApp.firebase.crashlytics.CrashlyticsService
 import com.revenuecat.purchases.kmp.Purchases
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
@@ -19,7 +20,8 @@ import kotlinx.coroutines.withContext
 class AuthRepositoryImpl(
     private val localDataSource: AuthLocalDataSource,
     private val remoteDataSource: AuthRemoteDataSource,
-    private val supabaseClient: SupabaseClient
+    private val supabaseClient: SupabaseClient,
+    private val crashlytics: CrashlyticsService
 ) : AuthRepository {
 
     override val isProFlow: Flow<Boolean> =
@@ -38,11 +40,14 @@ class AuthRepositoryImpl(
     ): Result<User> = withContext(Dispatchers.IO) {
 
         val result = remoteDataSource.loginWithGoogle(idToken)
-
+        result.onFailure { e ->
+            crashlytics.log("Google login failed")
+            crashlytics.recordException(e)
+        }
         if (result.isSuccess) {
 
             val user = result.getOrThrow()
-
+            crashlytics.setUserId(user.id)
             // Save locally
             localDataSource.saveUser(user.toEntity())
 
@@ -55,10 +60,12 @@ class AuthRepositoryImpl(
                     },
                     onError = { error ->
                         println("RevenueCat login failed: ${error.message}")
+                        crashlytics.log("RevenueCat login failed: ${error.message}")
+                        crashlytics.recordException(Exception("RevenueCat login failed: ${error.message}"))
                     }
                 )
             } catch (e: Exception) {
-                e.printStackTrace()
+                crashlytics.recordException(e)
             }
         }
 
@@ -69,11 +76,14 @@ class AuthRepositoryImpl(
         withContext(Dispatchers.IO) {
 
             val result = remoteDataSource.getCurrentUser()
-
+            result.onFailure { e ->
+                crashlytics.log("syncUser failed")
+                crashlytics.recordException(e)
+            }
             if (result.isSuccess) {
 
                 val user = result.getOrThrow()
-
+                crashlytics.setUserId(user.id)
                 // Save locally
                 localDataSource.clearUser()
                 localDataSource.saveUser(user.toEntity())
@@ -87,11 +97,12 @@ class AuthRepositoryImpl(
                             println("RevenueCat login success")
                         },
                         onError = { error ->
-                            println("RevenueCat login failed: ${error.message}")
+                            crashlytics.log("RevenueCat restore login failed")
+                            crashlytics.recordException(Exception(error.message))
                         }
                     )
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    crashlytics.recordException(e)
                 }
             }
 
@@ -108,10 +119,12 @@ class AuthRepositoryImpl(
                     },
                     onError = { error ->
                         error.message
+                        crashlytics.log("RevenueCat logout failed")
+                        crashlytics.recordException(Exception(error.message))
                     }
                 )
             } catch (e: Exception) {
-                e.printStackTrace()
+                crashlytics.recordException(e)
             }
 
             supabaseClient.auth.signOut()
@@ -132,62 +145,46 @@ class AuthRepositoryImpl(
 
     override suspend fun updateProStatus(
         isPro: Boolean
-    ): Unit = withContext(Dispatchers.IO) {
+    ) = withContext(Dispatchers.IO) {
 
-        println("========== UPDATE PRO STATUS ==========")
-        println("Incoming isPro: $isPro")
+        val currentUser = localDataSource.getCurrentUserSync() ?: return@withContext
 
-        val currentUser =
-            localDataSource.getCurrentUserSync()
-
-        println("Local Room user: $currentUser")
-
-        currentUser?.let { userEntity ->
-
-            println("Current user id: ${userEntity.id}")
-            println("Current Room isPro: ${userEntity.isPro}")
-
-            // Update Room
-            val updatedUser =
-                userEntity.copy(
-                    isPro = isPro
-                )
-
-            localDataSource.saveUser(updatedUser)
-
-            println("Room updated successfully")
-            println("New Room isPro: ${updatedUser.isPro}")
-
-            try {
-
-                println("Updating Supabase profile...")
-
-                supabaseClient
-                    .from("profiles")
-                    .update(
-                        {
-                            set("is_pro", isPro)
-                        }
-                    ) {
-                        filter {
-                            eq("id", userEntity.id)
-                        }
-                    }
-
-                println("Supabase updated successfully")
-                println("Supabase is_pro => $isPro")
-
-            } catch (e: Exception) {
-
-                println("SUPABASE UPDATE FAILED")
-                e.printStackTrace()
-            }
-
-        } ?: run {
-
-            println("No current user found in Room")
+        // Nothing changed → don't update Room or Supabase
+        if (currentUser.isPro == isPro) {
+            println("Premium unchanged. Skipping update.")
+            return@withContext
         }
 
-        println("=======================================")
+        println("Premium changed: ${currentUser.isPro} -> $isPro")
+
+        val updatedUser = currentUser.copy(
+            isPro = isPro
+        )
+        crashlytics.setCustomKey("user_id", currentUser.id)
+        crashlytics.setCustomKey("is_pro", isPro.toString())
+
+        // Update Room
+        localDataSource.saveUser(updatedUser)
+
+        try {
+            supabaseClient
+                .from("profiles")
+                .update({
+                    set("is_pro", isPro)
+                }) {
+                    filter {
+                        eq("id", currentUser.id)
+                    }
+                }
+
+            println("Supabase updated.")
+
+        } catch (e: Exception) {
+            crashlytics.log("Failed updating premium status")
+
+            crashlytics.setCustomKey("is_pro", isPro.toString())
+
+            crashlytics.recordException(e)
+        }
     }
 }

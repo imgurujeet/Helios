@@ -28,7 +28,7 @@ fun HomeHeroDto.toEntity(): HomeHeroEntity {
 fun HomeHeroDto.toDomain(): HomeHero {
     val domainAction = when (action.type) {
         "OPEN_PROMPT" -> HeroAction.OpenPrompt(action.value)
-        "OPEN_CATEGORY" -> HeroAction.OpenCategory(action.value)
+        "OPEN_CATEGORY" -> HeroAction.OpenCategory(action.value,"")
         "OPEN_URL" -> HeroAction.OpenUrl(action.value)
         else -> HeroAction.OpenUrl(action.value)
     }

@@ -25,8 +25,11 @@ import ai.achaialabs.helios.heliosApp.domain.usecase.auth.*
 import ai.achaialabs.helios.heliosApp.domain.usecase.explore.ObserveExploreFeedUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.explore.SyncExploreFeedUseCase
 import ai.achaialabs.helios.heliosApp.app.MainViewModel
-import ai.achaialabs.helios.heliosApp.data.local.ThemePreferences
+import ai.achaialabs.helios.heliosApp.data.local.AppPreference
 import ai.achaialabs.helios.heliosApp.data.remote.service.SubscriptionManager
+import ai.achaialabs.helios.heliosApp.data.repository.NotificationRepositoryImpl
+import ai.achaialabs.helios.heliosApp.domain.repository.NotificationRepository
+import ai.achaialabs.helios.heliosApp.domain.usecase.fcm.UpdateFcmTokenUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.viewall.ObservePromptsByCategoryUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.viewall.SyncPromptsByCategoryUseCase
 import ai.achaialabs.helios.heliosApp.ui.explore.ExploreViewModel
@@ -50,7 +53,7 @@ val appModule = module {
 
     // Supabase
     single { createSupabaseClient() }
-    single { ThemePreferences(get()) }
+    single { AppPreference(get()) }
     // Database
     single { getDatabaseBuilder() }
     single { getDatabase(get()) }
@@ -59,6 +62,8 @@ val appModule = module {
     single { get<PromptDatabase>().userDao() }
     single { get<PromptDatabase>().exploreDao() }
     single { get<PromptDatabase>().toolDao() }
+
+
 
     single {
         if (!Purchases.isConfigured) {
@@ -76,9 +81,9 @@ val appModule = module {
 
 
     // Remote Data Sources
-    single<AuthRemoteDataSource> { AuthRemoteDataSourceImpl(get()) }
-    single<PromptRemoteDataSource> { PromptRemoteDataSourceImpl(get()) }
-    single<ExploreRemoteDataSource> { ExploreRemoteDataSource(get()) }
+    single<AuthRemoteDataSource> { AuthRemoteDataSourceImpl(get(),get()) }
+    single<PromptRemoteDataSource> { PromptRemoteDataSourceImpl(get(),) }
+    single<ExploreRemoteDataSource> { ExploreRemoteDataSource(get(),get()) }
     single<ToolRemoteDataSource> { ToolRemoteDataSource(get()) }
 
 
@@ -88,17 +93,24 @@ val appModule = module {
             get(),
             get(),
             get(),
+            get(),
             get()
         )
     }
     single<AuthRepository> {
-        AuthRepositoryImpl(get(), get(), get())
+        AuthRepositoryImpl(get(), get(), get(),get())
     }
     single<ExploreRepository> {
-        ExploreRepositoryImpl(get(), get())
+        ExploreRepositoryImpl(get(), get(),get())
     }
     single<PromptDetailRepository>{
-        PromptDetailRepositoryImpl(get(), get())
+        PromptDetailRepositoryImpl(get(), get(),get())
+    }
+    single<NotificationRepository> {
+        NotificationRepositoryImpl(
+            supabase = get(),
+            authRepository = get()
+        )
     }
 
     // Use Cases
@@ -142,18 +154,22 @@ val appModule = module {
     factory {
         GetPremiumStatusUseCase(get())
     }
+    factory {
+        UpdateFcmTokenUseCase(get())
+    }
+
 
     // ViewModels
     viewModel {
-        HomeViewModel(get(), get(), get(), get(),get(),get(),get(),get())
+        HomeViewModel(get(), get(), get(), get(),get(),get(),get(),get(),get(),get(),get(),get())
     }
 
     viewModel {
-        LoginViewModel(get(), get())
+        LoginViewModel(get(), get(),get(),get())
     }
 
     viewModel {
-        ExploreViewModel(get(), get(), get())
+        ExploreViewModel(get(), get(), get(),get(),get())
     }
     viewModel { (id: String, name: String) ->
         ViewAllViewModel(
@@ -175,16 +191,18 @@ val appModule = module {
             toggleLikeUseCase = get(),
             toggleBookmarkUseCase = get(),
             getCurrentUserUseCase = get(),
-            adManager = get()
+            adManager = get(),
+            inAppMessagingService = get(),
+
         )
     }
 
     viewModel{
-        ProfileViewModel(get(), get(), get(), get(),get())
+        ProfileViewModel(get(), get(), get(), get(),get(),get())
     }
 
     viewModel {
-        MainViewModel(get(), get(), get(), get(),get(),get())
+        MainViewModel(get(), get(), get(), get(),get(),get(),get())
     }
 
 

@@ -1,9 +1,11 @@
 package ai.achaialabs.helios.heliosApp.ui.navigation
 
+import ai.achaialabs.helios.heliosApp.data.local.NavigationStyle
 import ai.achaialabs.helios.heliosApp.ui.explore.ExploreScreen
 import ai.achaialabs.helios.heliosApp.ui.favourite.FavouriteScreen
 import ai.achaialabs.helios.heliosApp.ui.home.HomeScreen
 import ai.achaialabs.helios.heliosApp.ui.navigation.bottomNavBar.BottomNavBar
+import ai.achaialabs.helios.heliosApp.ui.navigation.bottomNavBar.BottomNavBarFloating
 import ai.achaialabs.helios.heliosApp.ui.navigation.bottomNavBar.ScrollAwareBottomBar
 import ai.achaialabs.helios.heliosApp.ui.navigation.bottomNavBar.bottomNavItem
 import ai.achaialabs.helios.heliosApp.ui.profile.ProfileScreen
@@ -23,12 +25,18 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.revenuecat.purchases.kmp.models.CustomerInfo
+import com.revenuecat.purchases.kmp.models.StoreTransaction
 import com.revenuecat.purchases.kmp.ui.revenuecatui.Paywall
+import com.revenuecat.purchases.kmp.ui.revenuecatui.PaywallListener
 import com.revenuecat.purchases.kmp.ui.revenuecatui.PaywallOptions
 
 @Composable
 fun AppNavigation(
-    onLogout: () -> Unit
+    navigationStyle: NavigationStyle,
+    onLogout: () -> Unit,
+    onPurchaseCompleted: () -> Unit,
+    onRequestNotificationPermission: (() -> Unit)? = null
 ) {
     val backStack = rememberNavBackStack(
         configuration = navConfig,
@@ -46,7 +54,7 @@ fun AppNavigation(
     }
     val goBack: () -> Unit = {
         if (backStack.size > 1) {
-            backStack.removeLast()
+            backStack.removeAt(backStack.lastIndex)
         }
     }
 
@@ -114,7 +122,8 @@ fun AppNavigation(
                         onLogout = onLogout,
                         onUpgradeClick = {
                             showPaywall = true
-                        }
+                        },
+                        onRequestNotificationPermission = onRequestNotificationPermission
                     )
                 }
 
@@ -157,7 +166,15 @@ fun AppNavigation(
 
             ) {
                 ScrollAwareBottomBar(visible = chromeState.bottomBarVisible) {
-                    BottomNavBar(backStack)
+                    when (navigationStyle) {
+                        NavigationStyle.MATERIAL -> {
+                            BottomNavBar(backStack)
+                        }
+
+                        NavigationStyle.FLOATING -> {
+                            BottomNavBarFloating(backStack)
+                        }
+                    }
                 }
             }
         }
@@ -169,7 +186,27 @@ fun AppNavigation(
                     dismissRequest = {
                         showPaywall = false
                     }
-                ).build()
+                ).apply {
+
+                    listener = object : PaywallListener {
+
+                        override fun onPurchaseCompleted(
+                            customerInfo: CustomerInfo,
+                            storeTransaction: StoreTransaction
+                        ) {
+                            showPaywall = false
+                            onPurchaseCompleted()
+                        }
+
+                        override fun onRestoreCompleted(
+                            customerInfo: CustomerInfo
+                        ) {
+                            showPaywall = false
+                            onPurchaseCompleted()
+                        }
+                    }
+
+                }.build()
             )
         }
     }

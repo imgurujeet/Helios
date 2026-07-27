@@ -69,19 +69,19 @@ fun FavouriteScreen(
         topBar = {
             TopAppBar(
                 title = { Text(uiState.title, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            painter = painterResource(Res.drawable.ic_back_spaceship),
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.size(20.dp).rotate(
-                                -90f
-                            ),
-
-                            )
-                    }
-                },
+//                navigationIcon = {
+//                    IconButton(onClick = onBackClick) {
+//                        Icon(
+//                            painter = painterResource(Res.drawable.ic_back_spaceship),
+//                            contentDescription = "Back",
+//                            tint = MaterialTheme.colorScheme.onBackground,
+//                            modifier = Modifier.size(20.dp).rotate(
+//                                -90f
+//                            ),
+//
+//                            )
+//                    }
+//                },
                 scrollBehavior = scrollBehavior
             )
         }

@@ -16,7 +16,7 @@ fun SectionTitle(
     Text(
         text = title,
         modifier = Modifier.padding(horizontal = 16.dp),
-        fontSize = 20.sp,
+        fontSize = 16.sp,
         fontWeight = FontWeight.Bold
     )
 }

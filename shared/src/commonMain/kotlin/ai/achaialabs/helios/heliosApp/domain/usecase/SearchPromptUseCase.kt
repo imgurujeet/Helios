@@ -6,7 +6,12 @@ import androidx.paging.PagingData
 import kotlinx.coroutines.flow.Flow
 
 class SearchPromptsUseCase(private val repository: PromptRepository) {
+
+    suspend fun sync(query: String) {
+        repository.syncSearchResults(query)
+    }
     operator fun invoke(query: String): Flow<PagingData<Prompt>> {
         return repository.searchPrompts(query)
     }
 }
+

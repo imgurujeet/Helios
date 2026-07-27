@@ -99,6 +99,7 @@ kotlin {
             implementation(libs.coil.video)
             implementation(libs.koin.android)
             implementation(libs.play.services.ads)
+
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)

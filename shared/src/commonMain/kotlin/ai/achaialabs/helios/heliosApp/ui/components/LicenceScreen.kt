@@ -12,11 +12,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.mikepenz.aboutlibraries.Libs
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
-import com.mikepenz.aboutlibraries.ui.compose.rememberLibraries
 import helios.shared.generated.resources.Res
 import io.github.jan.supabase.auth.mfa.FactorType.Phone.value
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -32,13 +33,19 @@ fun LicensesScreen(onDismiss: () -> Unit) {
             null
         }
     }
+    val libs = remember(jsonString) {
+        jsonString?.let {
+            Libs.Builder()
+                .withJson(it)
+                .build()
+        }
+    }
 
     if (jsonString != null) {
-        // Pass the string to the 'libraries' parameter instead of 'json'
-        val libraries by rememberLibraries(libraries = jsonString!!)
+
 
         LibrariesContainer(
-            libraries = libraries,
+            libraries = libs,
             header = {
                 item {
                     Column(modifier = Modifier.padding(16.dp)) {

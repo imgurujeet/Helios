@@ -2,6 +2,7 @@ package ai.achaialabs.helios.heliosApp.data.remote.datasource
 
 import ai.achaialabs.helios.heliosApp.data.remote.response.CategoryApiResponse
 import ai.achaialabs.helios.heliosApp.data.remote.response.PromptApiResponse
+import ai.achaialabs.helios.heliosApp.firebase.crashlytics.CrashlyticsService
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
@@ -11,7 +12,8 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 class ExploreRemoteDataSource(
-    private val supabase: SupabaseClient
+    private val supabase: SupabaseClient,
+    private val crashlytics: CrashlyticsService
 ) {
     /**
      * Fetches a paginated list of categories from the Supabase "categories" table.
@@ -25,6 +27,9 @@ class ExploreRemoteDataSource(
                         range(from = offset.toLong(), to = (offset + limit - 1).toLong())
                     }
                     .decodeList<CategoryApiResponse>() // Decodes directly into your ApiResponse model
+            }.onFailure { e ->
+                crashlytics.log("Failed to fetch categories")
+                crashlytics.recordException(e)
             }
         }
     }
@@ -37,14 +42,25 @@ class ExploreRemoteDataSource(
             runCatching {
                 if (categoryIds.isEmpty()) return@runCatching emptyList()
 
-                supabase.postgrest["prompts_with_user_state"] // Name of your Supabase table
-                    .select(columns = Columns.ALL) {
-                        // Filters the query to only bring back prompts for the categories we just downloaded!
+                supabase.postgrest["prompts_with_user_state"]
+                    .select(
+                        columns = Columns.raw(
+                            """
+                                *,
+                                profiles:author_id(id, name, avatar_url),
+                                categories:category_id(id, name, icon_url, image_url),
+                                tool(*)
+                                """.trimIndent()
+                        )
+                    ) {
                         filter {
-                            PromptApiResponse::category isIn categoryIds
+                            isIn("category_id", categoryIds)
                         }
                     }
                     .decodeList<PromptApiResponse>()
+            }.onFailure { e ->
+                crashlytics.log("Failed to fetch prompts for categories")
+                crashlytics.recordException(e)
             }
         }
     }
@@ -80,6 +96,9 @@ class ExploreRemoteDataSource(
                         order("created_at", Order.DESCENDING)
                     }
                     .decodeList<PromptApiResponse>()
+            }.onFailure { e ->
+                crashlytics.log("Failed to fetch prompts by category")
+                crashlytics.recordException(e)
             }
         }
     }

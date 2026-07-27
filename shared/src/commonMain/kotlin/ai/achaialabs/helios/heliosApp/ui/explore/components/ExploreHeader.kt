@@ -37,7 +37,7 @@ fun ExploreHeader(
         title = {
             Text(
                 text = "Constellations",
-                style = MaterialTheme.typography.headlineSmall.copy(
+                style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp
                 )
@@ -54,7 +54,7 @@ fun ExploreHeader(
                     .clickable {
                         onUnlockPremiumClick()
                     }
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
 
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -64,7 +64,7 @@ fun ExploreHeader(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.surface,
                     modifier = Modifier
-                        .size(20.dp)
+                        .size(16.dp)
                         .padding(end = 6.dp)
                 )
 
@@ -72,7 +72,7 @@ fun ExploreHeader(
                     text = "Unlock Pro",
                     color = MaterialTheme.colorScheme.surface,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
+                    fontSize = 11.sp
                )
                }
             }

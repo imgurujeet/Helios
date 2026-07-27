@@ -24,7 +24,10 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -45,6 +48,7 @@ import helios.shared.generated.resources.ic_gift_box
 import helios.shared.generated.resources.ic_star_orbit
 import org.jetbrains.compose.resources.painterResource
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CosmicGate(
     isPremium: Boolean,
@@ -181,7 +185,8 @@ fun CosmicGate(
                     ) {
 
                         if (isAdLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            //CircularWavyProgressIndicator(modifier = Modifier.size(16.dp), color = Color(0xF0D55900),)
+                            LoadingIndicator(modifier = Modifier.size(20.dp), color = Color(0xF0D55900))
                         } else {
                             Text(buttonText)
                         }

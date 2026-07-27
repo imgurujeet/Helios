@@ -10,6 +10,7 @@ interface PromptRepository {
 
     fun searchPrompts(query: String): Flow<PagingData<Prompt>>
 
+    suspend fun syncSearchResults(query: String)
     fun getLikedPrompts(): Flow<PagingData<Prompt>>
     fun observeHomePrompts(limit: Int): Flow<List<Prompt>>
     fun getHomeHeroes(): Flow<List<HomeHero>>

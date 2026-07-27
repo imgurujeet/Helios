@@ -5,6 +5,7 @@ import ai.achaialabs.helios.heliosApp.domain.usecase.auth.GetCurrentUserUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.LoginUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.LogoutUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.SyncUserUseCase
+import ai.achaialabs.helios.heliosApp.firebase.analytics.AnalyticsService
 import ai.achaialabs.helios.heliosApp.ui.mapper.toUi
 import ai.achaialabs.helios.heliosApp.ui.model.UserUi
 import androidx.lifecycle.ViewModel
@@ -30,7 +31,8 @@ class ProfileViewModel(
     private val logoutUseCase: LogoutUseCase,
     private val syncUserUseCase: SyncUserUseCase,
     private val loginUseCase: LoginUseCase,
-    private val getPremiumStatusUseCase: GetPremiumStatusUseCase
+    private val getPremiumStatusUseCase: GetPremiumStatusUseCase,
+    private val analytics: AnalyticsService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -119,6 +121,7 @@ class ProfileViewModel(
      * Logs the user out and clears the session.
      */
     fun logout() {
+        analytics.logEvent("logout_clicked")
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
@@ -162,4 +165,5 @@ class ProfileViewModel(
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }
+
 }

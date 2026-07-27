@@ -1,6 +1,7 @@
 package ai.achaialabs.helios.heliosApp.utils
 
 import ai.achaialabs.helios.heliosApp.ui.navigation.ChromeState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
@@ -52,11 +53,47 @@ fun ObserveScroll(
     chromeState: ChromeState
 ) {
     LaunchedEffect(gridState) {
-        snapshotFlow { gridState.firstVisibleItemScrollOffset }
-            .collect { offset ->
-                if (gridState.isScrollInProgress) {
-                    chromeState.bottomBarVisible = offset <= 0
+
+        var previousIndex = 0
+        var previousOffset = 0
+
+        snapshotFlow {
+            gridState.firstVisibleItemIndex to
+                    gridState.firstVisibleItemScrollOffset
+        }.collect { (index, offset) ->
+
+            val isScrollingDown =
+                if (index != previousIndex) {
+                    index > previousIndex
+                } else {
+                    offset > previousOffset
                 }
+
+            chromeState.bottomBarVisible = !isScrollingDown
+
+            previousIndex = index
+            previousOffset = offset
+        }
+    }
+}
+
+@Composable
+fun ObserveScroll(
+    scrollState: ScrollState,
+    chromeState: ChromeState
+) {
+    LaunchedEffect(scrollState) {
+
+        var previousOffset = scrollState.value
+
+        snapshotFlow { scrollState.value }
+            .collect { offset ->
+
+                val isScrollingDown = offset > previousOffset
+
+                chromeState.bottomBarVisible = !isScrollingDown
+
+                previousOffset = offset
             }
     }
 }

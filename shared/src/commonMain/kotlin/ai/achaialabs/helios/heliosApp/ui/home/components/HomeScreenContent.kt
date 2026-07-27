@@ -2,8 +2,11 @@ package ai.achaialabs.helios.heliosApp.ui.home.components
 
 import ai.achaialabs.helios.heliosApp.ad.NativeAdCard
 import ai.achaialabs.helios.heliosApp.ad.NativeAdState
+import ai.achaialabs.helios.heliosApp.domain.model.HeroAction
+import ai.achaialabs.helios.heliosApp.domain.model.Prompt
 import ai.achaialabs.helios.heliosApp.ui.CosmicLottieLoader
 import ai.achaialabs.helios.heliosApp.ui.home.HomeUiState
+import ai.achaialabs.helios.heliosApp.ui.model.PromptUi
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -48,8 +52,9 @@ fun HomeScreenContent(
     listState: LazyListState = rememberLazyListState(),
     onPlayClick: (String) -> Unit = {},
     onLikeClick: (String) -> Unit = {},
-    onShareClick: (String) -> Unit = {},
+    onShareClick: (PromptUi) -> Unit = {},
     onPromptClick: (String) -> Unit = {},
+    onHeroClick: (HeroAction) -> Unit = {},
     onLoadMore: () -> Unit,
 ) {
 
@@ -68,6 +73,7 @@ fun HomeScreenContent(
             onLoadMore()
         }
     }
+
     LazyColumn(
         state = listState,
         modifier = modifier
@@ -83,13 +89,13 @@ fun HomeScreenContent(
                 HomeHero(
                     heroes = uiState.heroes,
                     onHeroClick = { hero ->
-
+                        println("Content received: ${hero.action}")
+                        onHeroClick(hero.action)
                     }
                 )
             }
 
             Spacer(Modifier.height(20.dp))
-
             SectionTitle(
                 title = "Discover Prompts"
             )
@@ -138,7 +144,7 @@ fun HomeScreenContent(
                             },
 
                             onShareClick = {
-                                onShareClick(prompt.id)
+                                onShareClick(prompt)
                             }
                         )
                     }

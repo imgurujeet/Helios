@@ -1,19 +1,33 @@
 package ai.achaialabs.helios.heliosApp.ui.navigation.bottomNavBar
 
+import ai.achaialabs.helios.heliosApp.ui.navigation.Home
 import ai.achaialabs.helios.heliosApp.ui.navigation.bottomNavBar.model.NavItemIconSource
 import ai.achaialabs.helios.heliosApp.utils.Haptics
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalRippleConfiguration
@@ -27,11 +41,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
 import org.jetbrains.compose.resources.painterResource
@@ -85,8 +105,16 @@ fun BottomNavBar(
                         onClick = {
                             if (!selected) {
                                 Haptics.vibrateClick()
-                                backStack.clear()
-                                backStack.add(item.destination)
+                                while (
+                                    backStack.isNotEmpty() &&
+                                    backStack.last() !is Home
+                                ) {
+                                    backStack.removeAt(backStack.lastIndex)
+                                }
+
+                                if (backStack.isEmpty() || backStack.last() != item.destination) {
+                                    backStack.add(item.destination)
+                                }
                             }
                         },
 
@@ -135,6 +163,127 @@ fun BottomNavBar(
         }
     }
 }
+
+
+@Composable
+fun BottomNavBarFloating(
+    backStack: MutableList<NavKey>
+) {
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.navigationBars),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+
+
+        Row(
+            modifier = Modifier
+                .padding(bottom = 12.dp)
+                .fillMaxWidth(0.62f)
+                .height(60.dp)
+                .shadow(
+                    elevation = 20.dp,
+                    shape = RoundedCornerShape(100.dp),
+                    clip = false
+                )
+                .clip(RoundedCornerShape(100.dp))
+                .background(
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                )
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(alpha = 0.08f),
+                    shape = RoundedCornerShape(100.dp)
+                )
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+
+            bottomNavItem.forEach { item ->
+
+                val selected = backStack.last() == item.destination
+
+                val scale by animateFloatAsState(
+                    targetValue = if (selected) 1.15f else 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    label = ""
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                        }
+                        .clickable {
+
+                            if (!selected) {
+                                Haptics.vibrateClick()
+                                while (
+                                    backStack.isNotEmpty() &&
+                                    backStack.last() !is Home
+                                ) {
+                                    backStack.removeAt(backStack.lastIndex)
+                                }
+
+                                if (backStack.isEmpty() || backStack.last() != item.destination) {
+                                    backStack.add(item.destination)
+                                }
+                            }
+
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+
+                    when (val icon = item.icon) {
+
+                        is NavItemIconSource.Vector -> {
+
+                            Icon(
+                                imageVector = icon.imageVector,
+                                contentDescription = item.label,
+                                modifier = Modifier.size(24.dp),
+                                tint = if (selected) Color(0xF0D55900) else MaterialTheme.colorScheme.onBackground.copy(
+                                    alpha = 0.8f
+                                )
+                            )
+
+                        }
+
+                        is NavItemIconSource.Drawable -> {
+
+                            Icon(
+                                painter = painterResource(icon.resId),
+                                contentDescription = item.label,
+                                modifier = Modifier.size(24.dp),
+                                tint = if (selected) Color(0xF0D55900) else MaterialTheme.colorScheme.onBackground.copy(
+                                    alpha = 0.8f
+                                )
+                            )
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+}
+
+
+
 
 
 @Composable

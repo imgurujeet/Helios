@@ -2,6 +2,7 @@ package ai.achaialabs.helios.heliosApp.data.remote.datasource
 
 import ai.achaialabs.helios.heliosApp.data.remote.dto.UserDto
 import ai.achaialabs.helios.heliosApp.domain.model.User
+import ai.achaialabs.helios.heliosApp.firebase.crashlytics.CrashlyticsService
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
@@ -14,7 +15,8 @@ interface AuthRemoteDataSource {
 }
 
 class AuthRemoteDataSourceImpl(
-    private val supabaseClient: SupabaseClient
+    private val supabaseClient: SupabaseClient,
+    private val crashlytics: CrashlyticsService
 ) : AuthRemoteDataSource {
     override suspend fun loginWithGoogle(idToken: String): Result<User> {
         return try {
@@ -22,9 +24,11 @@ class AuthRemoteDataSourceImpl(
                 this.idToken = idToken
                 this.provider = Google
             }
-            
+            crashlytics.log("Google login successful")
             getCurrentUser()
         } catch (e: Exception) {
+            crashlytics.log("Google login failed")
+            crashlytics.recordException(e)
             Result.failure(e)
         }
     }
@@ -71,6 +75,7 @@ class AuthRemoteDataSourceImpl(
                 )
             )
         } catch (e: Exception) {
+            crashlytics.log("Failed to retrieve current user")
             Result.failure(e)
         }
     }

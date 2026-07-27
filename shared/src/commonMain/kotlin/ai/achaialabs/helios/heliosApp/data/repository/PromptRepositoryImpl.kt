@@ -11,6 +11,7 @@ import ai.achaialabs.helios.heliosApp.data.remote.datasource.PromptRemoteDataSou
 import ai.achaialabs.helios.heliosApp.domain.model.HomeHero
 import ai.achaialabs.helios.heliosApp.domain.model.Prompt
 import ai.achaialabs.helios.heliosApp.domain.repository.PromptRepository
+import ai.achaialabs.helios.heliosApp.firebase.crashlytics.CrashlyticsService
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
@@ -26,7 +27,10 @@ class PromptRepositoryImpl(
     private val localHeroDataSource: HomeHeroLocalDataSource,
     private val remoteDataSource: PromptRemoteDataSource,
     private val promptDao: PromptDao,
+    private val crashlytics: CrashlyticsService
 ) : PromptRepository {
+
+
 
     override fun searchPrompts(query: String): Flow<PagingData<Prompt>> {
         return Pager(
@@ -43,6 +47,18 @@ class PromptRepositoryImpl(
             pagingData.map { it.toDomain() }
         }
     }
+
+    override suspend fun syncSearchResults(query: String) {
+
+        if (query.length < 2) return
+
+        val remote = remoteDataSource.searchPrompts(query)
+
+        localPromptDataSource.insertPrompts(
+            remote.map { it.toEntity() }
+        )
+    }
+
 
     // 1. OBSERVE: UI listens to this. As limit grows, Room emits more items.
     override fun observeHomePrompts(limit: Int): Flow<List<Prompt>> {
@@ -65,6 +81,9 @@ class PromptRepositoryImpl(
 
                 // Return TRUE if we reached the end of the feed
                 remotePrompts.size < pageSize
+            }.onFailure { e ->
+                crashlytics.log("Sync Home Prompt failed")
+                crashlytics.recordException(e)
             }
         }
     }
@@ -85,6 +104,9 @@ class PromptRepositoryImpl(
 
                 localHeroDataSource.deleteAllHeroes()
                 localHeroDataSource.insertHeroes(remoteHeroes.map { it.toEntity() })
+            }.onFailure { e ->
+                crashlytics.log("Refresh Home Data failed")
+                crashlytics.recordException(e)
             }
         }
     }
@@ -105,6 +127,8 @@ class PromptRepositoryImpl(
         val isSuccess = try {
             remoteDataSource.toggleLike(promptId)
         } catch (e: Exception) {
+            crashlytics.log("toggleLike failed")
+            crashlytics.recordException(e)
             false // Treat any crash as a failure
         }
 

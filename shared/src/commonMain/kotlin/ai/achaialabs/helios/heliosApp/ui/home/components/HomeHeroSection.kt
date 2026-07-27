@@ -154,7 +154,7 @@ private fun HomeHeroCarouselContent(
                 text = hero.title,
                 color = Color.White,
                 fontWeight = FontWeight.Black,
-                fontSize = 26.sp
+                fontSize = 20.sp
             )
 
             hero.description?.let {

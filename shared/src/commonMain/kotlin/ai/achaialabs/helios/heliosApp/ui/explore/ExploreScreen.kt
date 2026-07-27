@@ -20,10 +20,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBarDefaults
@@ -31,13 +35,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.koin.compose.viewmodel.koinViewModel
 
 data class CategoryRowUi(
@@ -47,6 +54,7 @@ data class CategoryRowUi(
 
 
 val ThemeAmber = Color(0xFFF59E0B)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ExploreScreen(
     chromeState: ChromeState,
@@ -60,28 +68,52 @@ fun ExploreScreen(
     onUnlockPremiumClick: () -> Unit = {}
 ) {
 
-
-
     val uiState by viewModel.uiState.collectAsState()
     val isPremium by viewModel.isPremium.collectAsStateWithLifecycle()
     val scrollBehavior =
         TopAppBarDefaults.enterAlwaysScrollBehavior()
     val listState = rememberLazyListState()
 
+
     ObserveScroll(
         listState = listState,
         chromeState = chromeState
     )
 
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+
+            val lastVisibleItem =
+                layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+
+            lastVisibleItem to layoutInfo.totalItemsCount
+        }
+            .distinctUntilChanged()
+            .collect { (lastVisible, totalItems) ->
+
+                // Trigger when user is close to the end
+                if (lastVisible >= totalItems - 3) {
+                    viewModel.loadMore()
+                }
+            }
+    }
+    LaunchedEffect(Unit){
+        viewModel.viewAllOpened()
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().nestedScroll(
+                scrollBehavior.nestedScrollConnection
+                ),
         topBar = {
             ExploreHeader(
                 isPremium= isPremium,
                 onUnlockPremiumClick = onUnlockPremiumClick,
                 scrollBehavior = scrollBehavior
             )
+
 
         }
     ) { paddingValues ->
@@ -90,7 +122,9 @@ fun ExploreScreen(
         if (uiState.isInitialLoading) {
             // Full screen loading on very first launch
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                CircularWavyProgressIndicator(
+                    color = Color(0xF0D55900)
+                )
             }
             return@Scaffold
         }
@@ -105,14 +139,19 @@ fun ExploreScreen(
                 contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp) // Bottom padding for navbar
             ) {
 
-                itemsIndexed(
+                items(
                     items = uiState.categories,
-                    key = { _, item -> item.category.id }
-                ) { index, categoryRow ->
+                    key = { it.category.id }
+                ) { categoryRow ->
 
                     CategorySectionHeader(
                         title = categoryRow.category.name,
-                        onViewAllClick = { onViewAllClick(categoryRow.category.id, categoryRow.category.name) }
+                        onViewAllClick = {
+                            viewModel.onCategoryOpened(
+                                categoryId = categoryRow.category.id,
+                                categoryName = categoryRow.category.name
+                            )
+                            onViewAllClick(categoryRow.category.id, categoryRow.category.name) }
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -135,6 +174,11 @@ fun ExploreScreen(
                             }
                         ),
                         onItemClick = { prompt ->
+                            viewModel.onPromptOpened(
+                                promptId = prompt.id,
+                                categoryId = categoryRow.category.id,
+                                categoryName = categoryRow.category.name
+                            )
                             onPromptClick(
                                 prompt.id,
                                 categoryRow.category.id
@@ -146,15 +190,8 @@ fun ExploreScreen(
 
                     }
 
-                    Spacer(modifier = Modifier.height(40.dp))
+                    Spacer(modifier = Modifier.height(25.dp))
 
-                    // 🚀 2. PAGINATION TRIGGER
-                    // If we are rendering the very last item in the current list, tell the ViewModel to fetch more!
-                    if (index == uiState.categories.lastIndex) {
-                        LaunchedEffect(key1 = index) {
-                            viewModel.loadMore()
-                        }
-                    }
                 }
                 if (uiState.isPaginating) {
                     item {
@@ -164,8 +201,9 @@ fun ExploreScreen(
                                 .padding(vertical = 16.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                            LoadingIndicator(modifier = Modifier.size(32.dp), color = Color(0xF0D55900))
                         }
+
                     }
                 }
 

@@ -169,19 +169,19 @@ fun HeroImageSection(
         )
 
         // Gradient Vignette
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clip(RoundedCornerShape(28.dp))
-                .background(
-                    Brush.verticalGradient(
-                        0.0f to CosmicDarkBg.copy(alpha = 0.35f),
-                        0.4f to Color.Transparent,
-                        0.7f to CosmicDarkBg.copy(alpha = 0.30f),
-                        1.0f to CosmicDarkBg.copy(alpha = 0.95f)
-                    )
-                )
-        )
+//        Box(
+//            modifier = Modifier
+//                .matchParentSize()
+//                .clip(RoundedCornerShape(28.dp))
+//                .background(
+//                    Brush.verticalGradient(
+//                        0.0f to CosmicDarkBg.copy(alpha = 0.35f),
+//                        0.4f to Color.Transparent,
+//                        0.7f to CosmicDarkBg.copy(alpha = 0.30f),
+//                        1.0f to CosmicDarkBg.copy(alpha = 0.95f)
+//                    )
+//                )
+//        )
 
         // Pro Badge
         if (currentPrompt.isPremium) {
@@ -218,16 +218,16 @@ fun HeroImageSection(
         // Bottom Content
         Row(
             modifier = Modifier
-                .align(Alignment.BottomStart)
+                .align(Alignment.BottomEnd)
                 .fillMaxWidth()
                 .padding(start = 24.dp, end = 16.dp, bottom = 24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.Bottom
         ) {
 
             Text(
                 text = currentPrompt.content.title,
-                style = MaterialTheme.typography.headlineMedium.copy(
+                style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp
                 ),
@@ -254,11 +254,11 @@ fun HeroImageSection(
                     tint = Color.White,
                     onClick = onShareClick
                 )
-                CosmicMediaAction(
-                    icon = Icons.Rounded.Fullscreen,
-                    tint = Color.White,
-                    onClick = onFullScreenClick
-                )
+//                CosmicMediaAction(
+//                    icon = Icons.Rounded.Fullscreen,
+//                    tint = Color.White,
+//                    onClick = onFullScreenClick
+//                )
             }
         }
     }

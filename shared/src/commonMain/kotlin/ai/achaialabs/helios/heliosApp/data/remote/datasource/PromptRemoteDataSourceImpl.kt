@@ -44,29 +44,34 @@ class PromptRemoteDataSourceImpl(
         // 3. Finally, map it and return it
         return apiResponse.map { it.toPromptDto() }
 
-//        return supabaseClient
-//            .postgrest["prompts_with_user_state"]
-//            .select(
-//                Columns.raw(
-//                    """
-//                    *,
-//                    profiles:author_id(id, name, avatar_url),
-//                    categories:category_id(id, name, icon_url, image_url),
-//                    tool(*)
-//                    """.trimIndent()
-//                )
-//            ) {
-//                range(fromIndex, toIndex)
-//                order("created_at", Order.DESCENDING)
-//            }
-//            .decodeList<PromptApiResponse>()
-//
-//
-//            .map { it.toPromptDto() }
-
 
     }
 
+
+    override suspend fun searchPrompts(query: String): List<PromptDto> {
+
+        val apiResponse = supabaseClient
+            .postgrest["prompts_with_user_state"]
+            .select(
+                Columns.raw(
+                    """
+                *,
+                profiles:author_id(id, name, avatar_url),
+                categories:category_id(id, name, icon_url, image_url),
+                tool(*)
+                """.trimIndent()
+                )
+            ) {
+                filter {
+                    ilike("title", "%$query%")
+                }
+                order("created_at", Order.DESCENDING)
+                limit(50)
+            }
+            .decodeList<PromptApiResponse>()
+
+        return apiResponse.map { it.toPromptDto() }
+    }
 
 
     override suspend fun getHomeHeroes(): List<HomeHeroDto> {

@@ -82,14 +82,14 @@ fun PromptCard(
                     .padding(14.dp)
             ) {
 
-                Text(
-                    text = prompt.title,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+//                Text(
+//                    text = prompt.title,
+//                    maxLines = 2,
+//                    overflow = TextOverflow.Ellipsis,
+//                    style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+//                    fontWeight = FontWeight.Bold,
+//                    color = Color.White
+//                )
 
                 Spacer(Modifier.height(10.dp))
 

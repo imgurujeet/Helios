@@ -2,6 +2,8 @@ package ai.achaialabs.helios.heliosApp.ui.onboarding
 
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.LoginUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.SyncUserUseCase
+import ai.achaialabs.helios.heliosApp.domain.usecase.fcm.UpdateFcmTokenUseCase
+import ai.achaialabs.helios.heliosApp.firebase.fcm.PushNotificationService
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,7 +12,9 @@ import kotlinx.coroutines.launch
 
 class LoginViewModel(
     private val loginUseCase: LoginUseCase,
-    private val syncUserUseCase: SyncUserUseCase
+    private val syncUserUseCase: SyncUserUseCase,
+    private val pushNotificationService: PushNotificationService,
+    private val updateFcmTokenUseCase: UpdateFcmTokenUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
@@ -33,6 +37,11 @@ class LoginViewModel(
             _uiState.value = LoginUiState.Loading
             val result = syncUserUseCase()
             if (result.isSuccess) {
+                val token = pushNotificationService.getToken()
+
+                if (token != null) {
+                    updateFcmTokenUseCase(token)
+                }
                 _uiState.value = LoginUiState.Success
             } else {
                 _uiState.value = LoginUiState.Error(result.exceptionOrNull()?.message ?: "Sync failed")

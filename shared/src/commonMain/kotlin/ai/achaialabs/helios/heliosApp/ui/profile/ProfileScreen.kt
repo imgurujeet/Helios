@@ -1,6 +1,7 @@
 package ai.achaialabs.helios.heliosApp.ui.profile
 
 import ai.achaialabs.helios.heliosApp.app.MainViewModel
+import ai.achaialabs.helios.heliosApp.firebase.fcm.PushNotificationService
 import ai.achaialabs.helios.heliosApp.ui.components.LicensesScreen
 import ai.achaialabs.helios.heliosApp.ui.model.UserUi
 import ai.achaialabs.helios.heliosApp.ui.navigation.ChromeState
@@ -13,7 +14,9 @@ import ai.achaialabs.helios.heliosApp.ui.profile.components.ProfileCard
 import ai.achaialabs.helios.heliosApp.ui.profile.components.RequestPromptDialog
 import ai.achaialabs.helios.heliosApp.ui.profile.components.SettingsItem
 import ai.achaialabs.helios.heliosApp.ui.profile.components.ThemeSelectionDialog
+import ai.achaialabs.helios.heliosApp.utils.ObserveScroll
 import ai.achaialabs.helios.heliosApp.utils.getAppVersion
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -30,6 +33,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,11 +45,14 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Logout
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.Science
@@ -59,6 +67,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -71,6 +81,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -92,13 +103,23 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = koinViewModel(),
     mainViewModel: MainViewModel = koinInject(),
     onUpgradeClick: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onRequestNotificationPermission: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var activeDialog by remember { mutableStateOf(ProfileDialogType.NONE) }
     val uriHandler = LocalUriHandler.current
-
+    val pushNotificationService: PushNotificationService = koinInject()
+    val scrollBehavior =
+        TopAppBarDefaults.enterAlwaysScrollBehavior()
+   // val listState = rememberLazyListState()
+    val scrollState= rememberScrollState()
+    ObserveScroll(
+        scrollState = scrollState,
+        chromeState = chromeState
+    )
     val userThemePreference by mainViewModel.isDarkTheme.collectAsState()
+    val navigationStyle by mainViewModel.navigationStyle.collectAsState()
     val systemTheme = isSystemInDarkTheme()
 
     val isDarkMode = userThemePreference ?: systemTheme
@@ -118,11 +139,15 @@ fun ProfileScreen(
         ProfileDialogType.THEME -> {
             ThemeSelectionDialog(
                 currentIsDark = isDarkMode,
-                onDismiss = { activeDialog = ProfileDialogType.NONE },
+                currentNavigationStyle = navigationStyle,
+                onDismiss = {
+                    activeDialog = ProfileDialogType.NONE
+                },
                 onThemeSelected = { selectedDark ->
-                    activeDialog = ProfileDialogType.NONE // Close dialog
                     mainViewModel.setDarkTheme(selectedDark)
-
+                },
+                onNavigationStyleSelected = { style ->
+                    mainViewModel.setNavigationStyle(style)
                 }
             )
         }
@@ -168,17 +193,56 @@ fun ProfileScreen(
         }
         ProfileDialogType.NONE -> {}
     }
+    var notificationsEnabled by remember {
+        mutableStateOf(pushNotificationService.isPermissionGranted())
+    }
+    notificationsEnabled = pushNotificationService.isPermissionGranted()
 
     Scaffold(
+        modifier = Modifier.nestedScroll(
+            scrollBehavior.nestedScrollConnection
+        ),
+        topBar = {
+
+
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Profile",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                },
+                actions = {
+                    IconButton(
+                        onClick =  {
+                            activeDialog = ProfileDialogType.LOGOUT
+                        }
+                    ) {
+                        Icon(
+                            Icons.Rounded.Logout,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                },
+                scrollBehavior = scrollBehavior
+            )
+
+        }
 
     ) { paddingValues ->
         ProfileScreenContent(
             user = uiState.user,
             isPro = isPro,
-            onLogout = { activeDialog = ProfileDialogType.LOGOUT },
+            scrollState = scrollState ,
             onThemeClick = { activeDialog = ProfileDialogType.THEME },
-            onSavedClick = {
-                chromeState.navigateTo(Favourite)
+            onNotificationClick = {
+                if (!notificationsEnabled) {
+                    onRequestNotificationPermission?.invoke()
+                }
             },
             onRequestPromptClick = {
                 activeDialog = ProfileDialogType.REQUEST_PROMPT
@@ -206,7 +270,11 @@ fun ProfileScreen(
             onUpgradeClick = {
                 onUpgradeClick()
             },
-            padding = paddingValues
+            onDeleteAccountClick = {
+                uriHandler.openUri("https://heliosai.achaialabs.tech/data-safety")
+            },
+            padding = paddingValues,
+            isNotificationEnabled = notificationsEnabled
         )
     }
 
@@ -219,9 +287,9 @@ fun ProfileScreen(
 fun ProfileScreenContent(
     user: UserUi? = null,
     isPro: Boolean,
-    onLogout: () -> Unit,
+    isNotificationEnabled: Boolean,
     onThemeClick: () -> Unit,
-    onSavedClick: () -> Unit,
+    onNotificationClick: () -> Unit,
     onRequestPromptClick: () -> Unit,
     onVideoGalaxyClick: () -> Unit,
     onRateClick: () -> Unit,
@@ -231,10 +299,11 @@ fun ProfileScreenContent(
     onAboutClick: () -> Unit,
     onDeveloperClick: () -> Unit,
     onUpgradeClick: () -> Unit,
-    padding: PaddingValues
+    onDeleteAccountClick: () -> Unit,
+    padding: PaddingValues,
+    scrollState : ScrollState = rememberScrollState(),
 ) {
 
-    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
@@ -244,35 +313,6 @@ fun ProfileScreenContent(
             .padding(horizontal = 18.dp),
     ) {
 
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-
-            Text(
-                text = "Profile",
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold
-                ),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            IconButton(
-                onClick = onLogout
-            ) {
-                Icon(
-                    Icons.Rounded.Logout,
-                    contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.8f)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
 
         // Profile Card
         ProfileCard(
@@ -298,20 +338,25 @@ fun ProfileScreenContent(
         Spacer(modifier = Modifier.height(12.dp))
 
         SettingsItem(
-            icon = Icons.Rounded.DarkMode,
-            title = "Theme",
-            subtitle = "Switch between dark and light mode",
+            icon = Icons.Rounded.Palette,
+            title = "Appearance",
+            subtitle = "Theme, navigation and personalization",
             onClick = {
                 onThemeClick()
             }
         )
 
+
         SettingsItem(
-            icon = Icons.Rounded.Bookmark,
-            title = "Saved Prompts",
-            subtitle = "Your collected inspirations",
+            icon = Icons.Rounded.Notifications,
+            title = "Notifications",
+            subtitle = if (isNotificationEnabled) {
+                "You're all set for updates."
+            } else {
+                "Never miss new updates."
+            },
             onClick = {
-                onSavedClick()
+                onNotificationClick()
             }
         )
 
@@ -382,6 +427,14 @@ fun ProfileScreenContent(
             subtitle = "Version, credits and libraries",
             onClick = {
                 onAboutClick()
+            }
+        )
+        SettingsItem(
+            icon = Icons.Rounded.DeleteForever,
+            title = "Delete Account",
+            subtitle = "Contact us to remove your account and data",
+            onClick = {
+                onDeleteAccountClick()
             }
         )
 

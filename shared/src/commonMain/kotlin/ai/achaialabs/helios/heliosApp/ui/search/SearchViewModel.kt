@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 
 class SearchViewModel(
     private val searchPromptsUseCase: SearchPromptsUseCase
@@ -28,11 +29,20 @@ class SearchViewModel(
         // 2. Only trigger if the text actually changed
         .distinctUntilChanged()
         .flatMapLatest { query ->
-            // 3. Instant feedback: return empty flow immediately if query is too short
-            if (query.trim().length < 2) {
+
+            val q = query.trim()
+
+            if (q.length < 2) {
                 flowOf(PagingData.empty())
             } else {
-                searchPromptsUseCase(query.trim())
+
+                // Fetch latest results from Supabase
+                viewModelScope.launch {
+                    searchPromptsUseCase.sync(q)
+                }
+
+                // Observe Room
+                searchPromptsUseCase(q)
             }
         }
         .cachedIn(viewModelScope)

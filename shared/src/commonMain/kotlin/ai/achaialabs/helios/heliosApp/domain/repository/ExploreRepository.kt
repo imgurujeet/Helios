@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface ExploreRepository {
     // 1. Observe local data reactively based on a dynamic limit
-    fun observeExploreFeed(categoryLimit: Int): Flow<List<ExploreCategory>>
+    fun observeExploreFeed(): Flow<List<ExploreCategory>>
 
     // 2. Fetch from remote and sync to local DB
     suspend fun syncExploreFeed(limit: Int, offset: Int): Result<Boolean>

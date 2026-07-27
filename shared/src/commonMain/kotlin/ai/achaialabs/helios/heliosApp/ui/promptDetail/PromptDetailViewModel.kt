@@ -11,6 +11,7 @@ import ai.achaialabs.helios.heliosApp.domain.usecase.ToggleBookmarkUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.ToggleLikeUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.GetCurrentUserUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.viewall.ObservePromptsByCategoryUseCase
+import ai.achaialabs.helios.heliosApp.firebase.Inappmessaging.InAppMessagingService
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -59,6 +60,7 @@ class PromptDetailViewModel(
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val observePromptsByCategoryUseCase: ObservePromptsByCategoryUseCase,
     private val adManager: AdManager,
+    private val inAppMessagingService: InAppMessagingService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PromptDetailUiState())
@@ -265,5 +267,9 @@ class PromptDetailViewModel(
                     currentState.revealedPrompts + promptId
             )
         }
+    }
+
+    fun onPromptDetailOpened() {
+        inAppMessagingService.triggerEvent("prompt_detail_opened")
     }
 }

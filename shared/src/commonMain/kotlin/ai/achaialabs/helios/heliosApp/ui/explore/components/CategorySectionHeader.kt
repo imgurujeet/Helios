@@ -13,6 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import io.ktor.util.toUpperCasePreservingASCIIRules
 
 @Composable
 fun CategorySectionHeader(
@@ -27,17 +29,19 @@ fun CategorySectionHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = title,
+            text = title.lowercase().replaceFirstChar {
+                it.titlecase()
+            },
             color = MaterialTheme.colorScheme.onBackground,
-            style = MaterialTheme.typography.titleLarge.copy(
+            fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
-            )
+
         )
 
         Text(
             text = "View All →",
             color = ThemeAmber,
-            style = MaterialTheme.typography.labelLarge.copy(
+            style = MaterialTheme.typography.labelMedium.copy(
                 fontWeight = FontWeight.SemiBold
             ),
             modifier = Modifier

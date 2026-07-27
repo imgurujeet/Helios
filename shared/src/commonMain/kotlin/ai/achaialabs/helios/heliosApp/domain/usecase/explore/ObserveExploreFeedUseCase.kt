@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 class ObserveExploreFeedUseCase(
     private val repository: ExploreRepository
 ) {
-    operator fun invoke(limit: Int): Flow<List<ExploreCategory>> {
-        return repository.observeExploreFeed(limit)
+    operator fun invoke(): Flow<List<ExploreCategory>> {
+        return repository.observeExploreFeed()
     }
 }
