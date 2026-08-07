@@ -52,9 +52,9 @@ actual class ShareManager actual constructor() {
             putExtra(
                 Intent.EXTRA_TEXT,
                 """
-                Create cinematic AI prompts with Helios AI Prompt Galaxy ✨
-                
-                Download now:
+               ✨ Shared using Helios AI Prompt Galaxy
+
+                Discover thousands of premium AI prompts.
                 https://play.google.com/store/apps/details?id=ai.achaialabs.helios
                 """.trimIndent()
             )

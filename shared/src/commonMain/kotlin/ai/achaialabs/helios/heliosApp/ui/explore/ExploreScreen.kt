@@ -68,7 +68,7 @@ fun ExploreScreen(
     onUnlockPremiumClick: () -> Unit = {}
 ) {
 
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isPremium by viewModel.isPremium.collectAsStateWithLifecycle()
     val scrollBehavior =
         TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -82,17 +82,13 @@ fun ExploreScreen(
 
     LaunchedEffect(listState) {
         snapshotFlow {
-            val layoutInfo = listState.layoutInfo
-
-            val lastVisibleItem =
-                layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-
-            lastVisibleItem to layoutInfo.totalItemsCount
+            listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
         }
             .distinctUntilChanged()
-            .collect { (lastVisible, totalItems) ->
+            .collect { lastVisible ->
 
-                // Trigger when user is close to the end
+                val totalItems = listState.layoutInfo.totalItemsCount
+
                 if (lastVisible >= totalItems - 3) {
                     viewModel.loadMore()
                 }
@@ -164,8 +160,8 @@ fun ExploreScreen(
                             height = 200.dp,
                             mainWidthRatio = 0.40f,
                             minorWidthRatio = 0.20f,
-                            pageSpacing = 16.dp,
-                            outerPadding = 16.dp,
+                            pageSpacing = 10.dp,
+                            outerPadding = 12.dp,
                             shapeProvider = { _, sizeFraction ->
                                 val animatedCorner = androidx.compose.ui.unit.lerp(
                                     start = 100.dp, stop = 24.dp, fraction = sizeFraction
@@ -190,7 +186,7 @@ fun ExploreScreen(
 
                     }
 
-                    Spacer(modifier = Modifier.height(25.dp))
+                    Spacer(modifier = Modifier.height(22.dp))
 
                 }
                 if (uiState.isPaginating) {

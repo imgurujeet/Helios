@@ -5,7 +5,6 @@ import ai.achaialabs.helios.heliosApp.domain.model.HeroAction
 import ai.achaialabs.helios.heliosApp.domain.model.Prompt
 import ai.achaialabs.helios.heliosApp.firebase.analytics.AnalyticsService
 import ai.achaialabs.helios.heliosApp.ui.home.components.HomeScreenContent
-import ai.achaialabs.helios.heliosApp.ui.home.components.HomeScreenLoader
 import ai.achaialabs.helios.heliosApp.ui.home.components.HomeTopBar
 import ai.achaialabs.helios.heliosApp.ui.home.components.LoadingPromptCard
 import ai.achaialabs.helios.heliosApp.ui.home.components.LoadingPromptGrid
@@ -23,16 +22,22 @@ import ai.achaialabs.helios.heliosApp.utils.ObserveScroll
 import ai.achaialabs.helios.heliosApp.utils.rememberExternalAppLauncher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -41,7 +46,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
@@ -61,6 +68,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun HomeScreen(
     chromeState: ChromeState,
    // onSearchClick : () -> Unit,
+    onProIconClick: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel()
 ) {
 
@@ -70,12 +78,16 @@ fun HomeScreen(
 
     val scrollBehavior =
         TopAppBarDefaults.enterAlwaysScrollBehavior()
-    val listState = rememberLazyListState()
+    val listState = rememberLazyStaggeredGridState()
     val uriHandler = LocalUriHandler.current
     ObserveScroll(
-        listState = listState,
+        staggeredGridState = listState,
         chromeState = chromeState
     )
+
+    var showPreparingShare by remember {
+        mutableStateOf(false)
+    }
     var sharePrompt by remember {
         mutableStateOf<PromptUi?>(null)
     }
@@ -83,6 +95,7 @@ fun HomeScreen(
     var shareCardReady by remember {
         mutableStateOf(false)
     }
+
     val graphicsLayer = rememberGraphicsLayer()
     val shareManager = remember {
         ShareManager()
@@ -97,13 +110,14 @@ fun HomeScreen(
             sharePrompt != null &&
             shareCardReady
         ) {
-
+            showPreparingShare = false
             delay(500)
 
             val imageBitmap =
                 graphicsLayer.toImageBitmap()
 
             shareManager.sharePrompt(
+
                 imageBitmap
             )
 
@@ -150,6 +164,7 @@ fun HomeScreen(
                         chromeState.navigateTo(Search)
                     },
                     isPro = isPro,
+                    onProIconClick = onProIconClick,
                     scrollBehavior = scrollBehavior
 
                 )
@@ -177,6 +192,8 @@ fun HomeScreen(
                 modifier = Modifier.padding(innerPadding),
                 uiState = uiState,
                 listState = listState,
+                selectedFilter = uiState.selectedTab,
+                onFilterSelected = viewModel::onFeedSelected,
                 onPlayClick = viewModel::onPlayClick,
                 onLikeClick = viewModel::onLikeClick,
                 onShareClick = { prompt ->
@@ -230,6 +247,33 @@ fun HomeScreen(
                 },
                 onLoadMore = viewModel::loadMore,
             )
+
+            if (showPreparingShare) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.35f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            LoadingIndicator(
+                                modifier = Modifier.size(56.dp),
+                                color = Color(0xF0D55900),
+                            )
+
+                            Spacer(Modifier.height(16.dp))
+
+                            Text("Preparing image...")
+                        }
+                    }
+                }
+            }
         }
 
     sharePrompt?.let { prompt ->
@@ -248,7 +292,8 @@ fun HomeScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Transparent)
+                .background(Color.Transparent),
+            contentAlignment = Alignment.Center
 
         ) {
 

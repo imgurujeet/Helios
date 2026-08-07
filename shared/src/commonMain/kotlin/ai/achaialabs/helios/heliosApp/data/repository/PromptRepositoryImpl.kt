@@ -1,6 +1,7 @@
 package ai.achaialabs.helios.heliosApp.data.repository
 
 import ai.achaialabs.helios.heliosApp.data.local.dao.PromptDao
+import ai.achaialabs.helios.heliosApp.data.local.datasource.HomeFeedLocalDataSource
 import ai.achaialabs.helios.heliosApp.data.local.datasource.HomeHeroLocalDataSource
 import ai.achaialabs.helios.heliosApp.data.local.datasource.PromptLocalDataSource
 import ai.achaialabs.helios.heliosApp.data.local.entity.PromptEntity
@@ -8,6 +9,8 @@ import ai.achaialabs.helios.heliosApp.data.mapper.toDomain
 import ai.achaialabs.helios.heliosApp.data.mapper.toEntity
 import ai.achaialabs.helios.heliosApp.data.remote.mapper.toEntity
 import ai.achaialabs.helios.heliosApp.data.remote.datasource.PromptRemoteDataSource
+import ai.achaialabs.helios.heliosApp.domain.filter.PromptFilter
+import ai.achaialabs.helios.heliosApp.domain.model.HomeFeedType
 import ai.achaialabs.helios.heliosApp.domain.model.HomeHero
 import ai.achaialabs.helios.heliosApp.domain.model.Prompt
 import ai.achaialabs.helios.heliosApp.domain.repository.PromptRepository
@@ -24,6 +27,7 @@ import kotlinx.coroutines.withContext
 
 class PromptRepositoryImpl(
     private val localPromptDataSource: PromptLocalDataSource,
+    private val localHomeFeedDataSource: HomeFeedLocalDataSource,
     private val localHeroDataSource: HomeHeroLocalDataSource,
     private val remoteDataSource: PromptRemoteDataSource,
     private val promptDao: PromptDao,
@@ -32,7 +36,14 @@ class PromptRepositoryImpl(
 
 
 
-    override fun searchPrompts(query: String): Flow<PagingData<Prompt>> {
+    override fun observePromptById(
+        promptId: String
+    ): Flow<Prompt?> =
+        localPromptDataSource.observePromptById(promptId)
+
+    override fun searchPrompts(
+        query: String,
+    ): Flow<PagingData<Prompt>> {
         return Pager(
             config = PagingConfig(
                 pageSize = 20,
@@ -43,44 +54,74 @@ class PromptRepositoryImpl(
                 promptDao.searchPromptsPaging(query)
             }
         ).flow.map { pagingData ->
-            // Use your existing domain mapper
             pagingData.map { it.toDomain() }
         }
     }
 
-    override suspend fun syncSearchResults(query: String) {
+    override suspend fun syncSearchResults(
+        query: String,
+    ) {
 
         if (query.length < 2) return
+
 
         val remote = remoteDataSource.searchPrompts(query)
 
         localPromptDataSource.insertPrompts(
-            remote.map { it.toEntity() }
+            remote.map {
+                it.toEntity()
+            }
         )
     }
 
 
     // 1. OBSERVE: UI listens to this. As limit grows, Room emits more items.
-    override fun observeHomePrompts(limit: Int): Flow<List<Prompt>> {
-        return localPromptDataSource.getPromptsWithLimit(limit)
+    override fun observeHomePrompts(
+        feedType: HomeFeedType
+    ): Flow<List<Prompt>> {
+
+        return localHomeFeedDataSource
+            .observeFeed(feedType)
+            .map { relations ->
+                relations.map {
+                    it.prompt.toDomain()
+                }
+            }
     }
 
     override fun getHomeHeroes(): Flow<List<HomeHero>> {
         return localHeroDataSource.getAllHeroes()
     }
 
-    // 2. PAGINATE: Fetch the next page and ADD it to Room (Do not delete!)
-    override suspend fun syncHomePrompts(page: Int, pageSize: Int): Result<Boolean> {
+    override suspend fun syncHomePrompts(
+        page: Int,
+        pageSize: Int,
+        feedType: HomeFeedType
+    ): Result<Boolean> {
         return withContext(Dispatchers.IO) {
             runCatching {
-                val remotePrompts = remoteDataSource.getHomePrompts(page = page, pageSize = pageSize)
 
-                // Insert the new page into Room. Because we are observing Room,
-                // the UI will update automatically.
-                localPromptDataSource.insertPrompts(remotePrompts.map { it.toEntity() })
+                val remotePrompts = remoteDataSource.getHomePrompts(
+                    page = page,
+                    pageSize = pageSize,
+                    feedType = feedType
+                )
 
-                // Return TRUE if we reached the end of the feed
+                val promptEntities = remotePrompts.map { it.toEntity() }
+
+                // Insert/update prompt data
+                localPromptDataSource.insertPrompts(promptEntities)
+
+                // Cache feed ordering
+                localHomeFeedDataSource.appendFeed(
+                    feedType = feedType,
+                    promptIds = promptEntities.map { it.id },
+                    startPosition = page * pageSize
+                )
+
+                // true = no more pages
                 remotePrompts.size < pageSize
+
             }.onFailure { e ->
                 crashlytics.log("Sync Home Prompt failed")
                 crashlytics.recordException(e)
@@ -88,22 +129,37 @@ class PromptRepositoryImpl(
         }
     }
 
-    // 3. PULL-TO-REFRESH: Wipes everything and starts over
-    override suspend fun refreshHomeData(): Result<Unit> {
+    override suspend fun refreshHomeData(
+        feedType: HomeFeedType
+    ): Result<Unit> {
         return withContext(Dispatchers.IO) {
             runCatching {
 
+                val remotePrompts = remoteDataSource.getHomePrompts(
+                    page = 0,
+                    pageSize = 20,
+                    feedType = feedType
+                )
 
-                // Fetch page 0 for prompts, and fetch heroes
-                val remotePrompts = remoteDataSource.getHomePrompts(page = 0, pageSize = 20)
                 val remoteHeroes = remoteDataSource.getHomeHeroes()
 
-                // Clear old cache and insert fresh data
-                localPromptDataSource.deleteAllPrompts()
-                localPromptDataSource.insertPrompts(remotePrompts.map { it.toEntity() })
+                val promptEntities = remotePrompts.map { it.toEntity() }
 
+                // Refresh prompts
+                localPromptDataSource.insertPrompts(promptEntities)
+
+                // Replace this feed's ordering only
+                localHomeFeedDataSource.replaceFeed(
+                    feedType = feedType,
+                    promptIds = promptEntities.map { it.id }
+                )
+
+                // Refresh heroes
                 localHeroDataSource.deleteAllHeroes()
-                localHeroDataSource.insertHeroes(remoteHeroes.map { it.toEntity() })
+                localHeroDataSource.insertHeroes(
+                    remoteHeroes.map { it.toEntity() }
+                )
+
             }.onFailure { e ->
                 crashlytics.log("Refresh Home Data failed")
                 crashlytics.recordException(e)

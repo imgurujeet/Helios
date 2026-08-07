@@ -26,10 +26,13 @@ import ai.achaialabs.helios.heliosApp.domain.usecase.explore.ObserveExploreFeedU
 import ai.achaialabs.helios.heliosApp.domain.usecase.explore.SyncExploreFeedUseCase
 import ai.achaialabs.helios.heliosApp.app.MainViewModel
 import ai.achaialabs.helios.heliosApp.data.local.AppPreference
+import ai.achaialabs.helios.heliosApp.data.local.dao.HomeFeedDao
 import ai.achaialabs.helios.heliosApp.data.remote.service.SubscriptionManager
 import ai.achaialabs.helios.heliosApp.data.repository.NotificationRepositoryImpl
 import ai.achaialabs.helios.heliosApp.domain.repository.NotificationRepository
 import ai.achaialabs.helios.heliosApp.domain.usecase.fcm.UpdateFcmTokenUseCase
+import ai.achaialabs.helios.heliosApp.domain.usecase.review.LaunchReviewUseCase
+import ai.achaialabs.helios.heliosApp.domain.usecase.update.CheckForUpdateUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.viewall.ObservePromptsByCategoryUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.viewall.SyncPromptsByCategoryUseCase
 import ai.achaialabs.helios.heliosApp.ui.explore.ExploreViewModel
@@ -62,7 +65,9 @@ val appModule = module {
     single { get<PromptDatabase>().userDao() }
     single { get<PromptDatabase>().exploreDao() }
     single { get<PromptDatabase>().toolDao() }
-
+    single<HomeFeedDao> {
+        get<PromptDatabase>().homeFeedDao()
+    }
 
 
     single {
@@ -75,6 +80,7 @@ val appModule = module {
 
     // Local Data Sources
     single<PromptLocalDataSource> { PromptLocalDataSourceImpl(get()) }
+    single<HomeFeedLocalDataSource> { HomeFeedLocalDataSourceImpl(get()) }
     single<HomeHeroLocalDataSource> { HomeHeroLocalDataSourceImpl(get()) }
     single<AuthLocalDataSource> { AuthLocalDataSourceImpl(userDao = get()) }
 
@@ -90,6 +96,7 @@ val appModule = module {
     // Repositories
     single<PromptRepository> {
         PromptRepositoryImpl(
+            get(),
             get(),
             get(),
             get(),
@@ -157,11 +164,26 @@ val appModule = module {
     factory {
         UpdateFcmTokenUseCase(get())
     }
+    factory {
+        GetRemixPromptsUseCase(
+            repository = get()
+        )
+    }
+    factory {
+        ObservePromptByIdUseCase(get())
+    }
+    factory {
+        LaunchReviewUseCase(get())
+    }
+
+    factory {
+        CheckForUpdateUseCase(get())
+    }
 
 
     // ViewModels
     viewModel {
-        HomeViewModel(get(), get(), get(), get(),get(),get(),get(),get(),get(),get(),get(),get())
+        HomeViewModel(get(), get(),get(), get(), get(),get(),get(),get(),get(),get(),get(),get(),get())
     }
 
     viewModel {
@@ -177,15 +199,17 @@ val appModule = module {
             categoryName = name,
             observePrompts = get(),
             syncPrompts = get(),
+            get(),
+            get(),
             get()
         )
     }
 
-    viewModel { (categoryId: String?) ->
+    viewModel {
         PromptDetailViewModel(
-            categoryId = categoryId, // Passed straight from the UI
+           // categoryId = categoryId, // Passed straight from the UI
             observePromptsByCategoryUseCase = get(), // The new UseCase we added!
-            getHomePromptsUseCase = get(),
+          //  getHomePromptsUseCase = get(),
             observeToolsUseCase = get(),
             syncToolsUseCase = get(),
             toggleLikeUseCase = get(),
@@ -193,6 +217,7 @@ val appModule = module {
             getCurrentUserUseCase = get(),
             adManager = get(),
             inAppMessagingService = get(),
+            observePromptByIdUseCase = get()
 
         )
     }
@@ -202,7 +227,7 @@ val appModule = module {
     }
 
     viewModel {
-        MainViewModel(get(), get(), get(), get(),get(),get(),get())
+        MainViewModel(get(),get(),get(), get(), get(), get(),get(),get(),get())
     }
 
 

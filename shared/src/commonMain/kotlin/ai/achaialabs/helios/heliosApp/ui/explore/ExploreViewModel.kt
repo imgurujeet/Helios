@@ -76,18 +76,17 @@ class ExploreViewModel(
      */
     private fun observeLocalDatabase() {
 
-        observeExploreFeedUseCase()
+        observeExploreFeedUseCase().distinctUntilChanged()
+
             .map { categories ->
 
-                categories
-                    .filter { it.prompts.isNotEmpty() }
+                categories .filter { it.prompts.isNotEmpty() }
                     .map { category ->
-
-                        CategoryRowUi(
-                            category = category.category.toUi(),
-                            prompts = category.prompts.map { it.toUi() }
-                        )
-                    }
+                    CategoryRowUi(
+                        category = category.category.toUi(),
+                        prompts = category.prompts.map { it.toUi() }
+                    )
+                }
             }
             .onEach { categories ->
 
@@ -122,46 +121,47 @@ class ExploreViewModel(
      */
     fun loadMore() {
 
-        // Ignore duplicate requests
         if (isSyncing || hasReachedEnd) return
+
+        isSyncing = true
 
         viewModelScope.launch {
 
-            isSyncing = true
+            try {
 
-            _uiState.update {
-                it.copy(
-                    isPaginating = currentOffset > 0,
-                    error = null
+                _uiState.update {
+                    it.copy(
+                        isPaginating = currentOffset > 0,
+                        error = null
+                    )
+                }
+
+                val nextOffset = currentOffset
+
+                syncExploreFeedUseCase(
+                    limit = PAGE_SIZE,
+                    offset = nextOffset
                 )
-            }
-
-            syncExploreFeedUseCase(
-                limit = PAGE_SIZE,
-                offset = currentOffset
-            )
-                .onSuccess { reachedEnd ->
-
-                    // Remember if server has no more pages
-                    hasReachedEnd = reachedEnd
-
-                    // Move offset only after a successful request
-                    currentOffset += PAGE_SIZE
-                }
-                .onFailure { throwable ->
-
-                    _uiState.update {
-                        it.copy(
-                            error = throwable.message
-                                ?: "Unable to fetch explore feed."
-                        )
+                    .onSuccess { reachedEnd ->
+                        hasReachedEnd = reachedEnd
+                        currentOffset = nextOffset + PAGE_SIZE
                     }
+                    .onFailure { throwable ->
+                        _uiState.update {
+                            it.copy(
+                                error = throwable.message
+                                    ?: "Unable to fetch explore feed."
+                            )
+                        }
+                    }
+
+            } finally {
+
+                isSyncing = false
+
+                _uiState.update {
+                    it.copy(isPaginating = false)
                 }
-
-            isSyncing = false
-
-            _uiState.update {
-                it.copy(isPaginating = false)
             }
         }
     }

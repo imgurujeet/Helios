@@ -1,8 +1,10 @@
 package ai.achaialabs.helios.heliosApp.ad
 
 import ai.achaialabs.helios.BuildKonfig
+import ai.achaialabs.helios.heliosApp.ActivityProvider
 import android.Manifest
 import android.content.Context
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdLoader
@@ -133,6 +135,7 @@ class AndroidAdManager(
                     override fun onAdFailedToLoad(
                         error: LoadAdError
                     ) {
+
 
                         _nativeAdState.value =
                             NativeAdState.Error(

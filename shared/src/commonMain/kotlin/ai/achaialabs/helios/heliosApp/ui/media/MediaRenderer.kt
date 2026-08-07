@@ -19,7 +19,7 @@ fun MediaRenderer(
 
             ImageMedia(
                 url = media.imageUrl,
-                modifier = modifier
+                modifier = modifier,
             )
         }
 

@@ -1,4 +1,4 @@
-package ai.achaialabs.helios.heliosApp.ad
+package ai.achaialabs.helios.heliosApp
 
 import android.app.Activity
 

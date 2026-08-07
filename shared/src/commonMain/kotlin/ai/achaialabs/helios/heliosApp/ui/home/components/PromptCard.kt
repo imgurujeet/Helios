@@ -39,6 +39,7 @@ import helios.shared.generated.resources.Res
 import helios.shared.generated.resources.ic_share
 import helios.shared.generated.resources.ic_star
 import helios.shared.generated.resources.ic_star_filled
+import kotlin.math.absoluteValue
 
 @Composable
 fun PromptCard(
@@ -50,7 +51,6 @@ fun PromptCard(
     onLikeClick: () -> Unit = {},
     onShareClick: () -> Unit = {}
 ) {
-
     Card(
         modifier = modifier
             .clickable(
@@ -61,7 +61,7 @@ fun PromptCard(
             ) {
                 onCardClick()
             },
-        shape = RoundedCornerShape(24.dp)
+        shape = RoundedCornerShape(18.dp)
     ) {
 
         Box {
@@ -69,8 +69,7 @@ fun PromptCard(
             MediaRenderer(
                 media = prompt.media,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp),
+                    .fillMaxWidth(),
                 isPlaying = isPlaying,
                 onPlayClick = onPlayClick
             )

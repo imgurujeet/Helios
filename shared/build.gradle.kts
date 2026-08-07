@@ -99,6 +99,12 @@ kotlin {
             implementation(libs.coil.video)
             implementation(libs.koin.android)
             implementation(libs.play.services.ads)
+            implementation(libs.play.app.update)
+            implementation(libs.play.app.update.ktx)
+
+            implementation(libs.play.review)
+            implementation(libs.play.review.ktx)
+            implementation(libs.kotlinx.coroutines.play.services)
 
         }
         commonMain.dependencies {

@@ -19,15 +19,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -42,10 +45,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import coil3.compose.AsyncImage
 import helios.shared.generated.resources.Res
 import helios.shared.generated.resources.ic_star_orbit
 import org.jetbrains.compose.resources.painterResource
@@ -61,6 +68,10 @@ fun HeroImageSection(
     onShareClick: () -> Unit = {},
     onFullScreenClick: () -> Unit = {}
 ) {
+
+    var showFullScreen by remember {
+        mutableStateOf(false)
+    }
     val formattedLikes = remember(currentPrompt.stats.likesCount) {
         val count = currentPrompt.stats.likesCount
         if (count >= 1000) {
@@ -113,7 +124,15 @@ fun HeroImageSection(
             modifier = Modifier
                 .fillMaxSize()
                 .border(1.dp, GlassBorder, RoundedCornerShape(28.dp))
-                .clip(RoundedCornerShape(28.dp)),
+                .clip(RoundedCornerShape(28.dp))
+                .clickable {
+                    if (!isVideo) {
+                        showFullScreen = true
+                    } else {
+                        manuallyPaused = !manuallyPaused
+                        onPlayClick()
+                    }
+                },
             isPlaying = effectiveIsPlaying,
 
             onPlayClick = null,
@@ -262,6 +281,57 @@ fun HeroImageSection(
             }
         }
     }
+
+    if (showFullScreen && mediaUi is FeedMediaUi.Image) {
+
+        Dialog(
+            onDismissRequest = {
+                showFullScreen = false
+            },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true
+            )
+        ) {
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
+
+                AsyncImage(
+                    model = mediaUi.imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+
+                IconButton(
+                    onClick = {
+                        showFullScreen = false
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(16.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                            CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "Close",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+    }
+
+
 }
 
 // Reusable Glassy Action Component

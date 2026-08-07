@@ -1,6 +1,6 @@
 package ai.achaialabs.helios
 
-import ai.achaialabs.helios.heliosApp.ad.ActivityProvider
+import ai.achaialabs.helios.heliosApp.ActivityProvider
 import ai.achaialabs.helios.heliosApp.app.App
 import ai.achaialabs.helios.heliosApp.di.androidModule
 import ai.achaialabs.helios.heliosApp.di.appModule

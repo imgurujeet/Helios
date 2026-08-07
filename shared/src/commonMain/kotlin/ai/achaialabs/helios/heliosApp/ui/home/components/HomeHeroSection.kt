@@ -46,8 +46,8 @@ fun HomeHero(
             height = 220.dp,
             mainWidthRatio = 0.80f,  // 40% Large cards
             minorWidthRatio = 0.10f, // 20% Pill card
-            pageSpacing = 16.dp,
-            outerPadding = 16.dp,
+            pageSpacing = 10.dp,
+            outerPadding = 8.dp,
             showIndicator = true,
             indicatorSpacing = 16.dp,
             shapeProvider = { _, sizeFraction ->

@@ -1,5 +1,8 @@
 package ai.achaialabs.helios.heliosApp.ui.viewall
 
+import ai.achaialabs.helios.heliosApp.ad.AdManager
+import ai.achaialabs.helios.heliosApp.ad.NativeAdState
+import ai.achaialabs.helios.heliosApp.domain.usecase.GetPremiumStatusUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.ToggleLikeUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.viewall.ObservePromptsByCategoryUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.viewall.SyncPromptsByCategoryUseCase
@@ -21,6 +24,8 @@ class ViewAllViewModel(
     private val observePrompts: ObservePromptsByCategoryUseCase,
     private val syncPrompts: SyncPromptsByCategoryUseCase,
     private val toggleLikeUseCase: ToggleLikeUseCase,
+    private val getPremiumStatusUseCase: GetPremiumStatusUseCase,
+    private val adManager: AdManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ViewAllUiState())
@@ -34,11 +39,36 @@ class ViewAllViewModel(
 
     init {
         _uiState.update { it.copy(categoryName = categoryName) }
-
+        observePremiumStatus()
         setupOfflineFirstObservation()
-
+        observeNativeAds()
         // Fetch the first page
         loadMore()
+    }
+
+    private fun observePremiumStatus() {
+        getPremiumStatusUseCase()
+            .onEach { isPremium ->
+                _uiState.update {
+                    it.copy(
+                        showAds = !isPremium
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun observeNativeAds() {
+        adManager.nativeAdState
+            .onEach { state ->
+
+                _uiState.update {
+                    it.copy(
+                        nativeAdState = state
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun setupOfflineFirstObservation() {
@@ -100,5 +130,8 @@ data class ViewAllUiState(
     val prompts: List<PromptUi> = emptyList(),
     val isLoading: Boolean = false,
     val activeVideoId: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val showAds: Boolean = false,
+    val nativeAdState: NativeAdState =
+        NativeAdState.Idle,
 )

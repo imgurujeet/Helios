@@ -3,10 +3,12 @@ package ai.achaialabs.helios.heliosApp.data.remote.datasource
 import ai.achaialabs.helios.heliosApp.data.remote.dto.HomeHeroDto
 import ai.achaialabs.helios.heliosApp.data.remote.dto.PromptDto
 import ai.achaialabs.helios.heliosApp.data.remote.response.PromptApiResponse
+import ai.achaialabs.helios.heliosApp.domain.filter.PromptFilter
+import ai.achaialabs.helios.heliosApp.domain.model.HomeFeedType
 
 interface PromptRemoteDataSource {
     // Default values allow you to call this with or without arguments
-    suspend fun getHomePrompts(page: Int = 0, pageSize: Int = 20): List<PromptDto>
+    suspend fun getHomePrompts(page: Int = 0, pageSize: Int = 20, feedType: HomeFeedType = HomeFeedType.LATEST): List<PromptDto>
 
     suspend fun searchPrompts(query: String): List<PromptDto>
     suspend fun getHomeHeroes(): List<HomeHeroDto>

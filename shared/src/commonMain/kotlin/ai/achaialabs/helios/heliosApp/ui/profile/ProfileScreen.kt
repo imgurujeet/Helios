@@ -224,7 +224,7 @@ fun ProfileScreen(
                         Icon(
                             Icons.Rounded.Logout,
                             contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.8f)
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                         )
                     }
                 },
@@ -250,7 +250,10 @@ fun ProfileScreen(
             onVideoGalaxyClick = {
 
             },
-            onRateClick = {},
+            onRateClick = {
+                //mainViewModel.launchReview()
+                uriHandler.openUri("https://play.google.com/store/apps/details?id=ai.achaialabs.helios")
+            },
             onHelpClick = {
                 activeDialog = ProfileDialogType.FEEDBACK
             },

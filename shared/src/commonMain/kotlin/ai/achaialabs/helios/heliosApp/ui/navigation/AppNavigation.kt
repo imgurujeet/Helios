@@ -66,7 +66,9 @@ fun AppNavigation(
         ) { key ->
             when (key) {
                 Home -> NavEntry(key) {
-                    HomeScreen(chromeState = chromeState)
+                    HomeScreen(chromeState = chromeState, onProIconClick = {
+                        showPaywall = true
+                    })
                 }
 
                 Explore -> NavEntry(key) {
@@ -123,7 +125,7 @@ fun AppNavigation(
                         onUpgradeClick = {
                             showPaywall = true
                         },
-                        onRequestNotificationPermission = onRequestNotificationPermission
+                        onRequestNotificationPermission = onRequestNotificationPermission,
                     )
                 }
 
@@ -141,7 +143,6 @@ fun AppNavigation(
 
                 is PromptDetail -> NavEntry(key) {
                     PromptDetailScreen(
-                        categoryId = key.categoryId,
                        // chromeState = chromeState,
                         promptId = key.promptId,
                         onBackClick = {

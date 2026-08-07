@@ -1,5 +1,6 @@
 package ai.achaialabs.helios.heliosApp.ui.search
 
+import ai.achaialabs.helios.heliosApp.domain.filter.PromptFilter
 import ai.achaialabs.helios.heliosApp.domain.repository.PromptRepository
 import ai.achaialabs.helios.heliosApp.domain.usecase.SearchPromptsUseCase
 import androidx.lifecycle.ViewModel

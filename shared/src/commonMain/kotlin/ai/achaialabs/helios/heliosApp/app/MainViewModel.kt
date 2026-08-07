@@ -1,11 +1,15 @@
 package ai.achaialabs.helios.heliosApp.app
 
 import ai.achaialabs.helios.heliosApp.ad.AdManager
+import ai.achaialabs.helios.heliosApp.app.review.ReviewResult
+import ai.achaialabs.helios.heliosApp.app.update.UpdateResult
 import ai.achaialabs.helios.heliosApp.data.local.AppPreference
 import ai.achaialabs.helios.heliosApp.data.local.NavigationStyle
 import ai.achaialabs.helios.heliosApp.data.remote.service.SubscriptionManager
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.IsLoggedInUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.LogoutUseCase
+import ai.achaialabs.helios.heliosApp.domain.usecase.review.LaunchReviewUseCase
+import ai.achaialabs.helios.heliosApp.domain.usecase.update.CheckForUpdateUseCase
 import ai.achaialabs.helios.heliosApp.firebase.analytics.AnalyticsService
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,6 +31,8 @@ class MainViewModel(
     private val appPreference: AppPreference,
     private val adManager: AdManager,
     private val analytics: AnalyticsService,
+    private val launchReviewUseCase: LaunchReviewUseCase,
+    private val checkForUpdateUseCase: CheckForUpdateUseCase
 ) : ViewModel() {
 
     private val _appState = MutableStateFlow<AppState>(AppState.Loading)
@@ -44,6 +50,7 @@ class MainViewModel(
         initialValue = null
     )
 
+    val updateState = checkForUpdateUseCase.updateState
     val navigationStyle = appPreference.navigationStyleFlow.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -55,6 +62,9 @@ class MainViewModel(
     init {
         preloadAds()
         checkSession()
+        observeUpdateState()
+
+        checkForUpdate()
     }
 
 
@@ -105,6 +115,79 @@ class MainViewModel(
             } catch (e: Exception) {
 
                 println("RC EXCEPTION = ${e.message}")
+            }
+        }
+    }
+
+    //check for update
+    private fun checkForUpdate() {
+        viewModelScope.launch {
+            checkForUpdateUseCase()
+        }
+    }
+
+    private fun observeUpdateState() {
+        viewModelScope.launch {
+
+            checkForUpdateUseCase.updateState.collect { result ->
+
+                when (result) {
+
+                    UpdateResult.NoUpdate -> Unit
+
+                    UpdateResult.UpdateStarted -> {
+                        analytics.logEvent("app_update_started")
+                    }
+
+                    UpdateResult.UpdateDownloaded -> {
+                        // TODO: Show snackbar/dialog
+                    }
+
+                    UpdateResult.UpdateCompleted -> {
+                        analytics.logEvent("app_update_completed")
+                    }
+
+                    UpdateResult.Cancelled -> {
+                        analytics.logEvent("app_update_cancelled")
+                    }
+
+                    is UpdateResult.Error -> {
+                        analytics.logEvent(
+                            "app_update_error",
+                            mapOf(
+                                "message" to (result.throwable.message ?: "Unknown")
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun completeUpdate() {
+        checkForUpdateUseCase.completeUpdate()
+    }
+
+    //review launch
+    fun launchReview() {
+        viewModelScope.launch {
+
+            when (val result = launchReviewUseCase()) {
+
+                ReviewResult.Completed -> {
+                    analytics.logEvent("review_requested")
+                }
+
+                ReviewResult.NotAvailable -> Unit
+
+                is ReviewResult.Error -> {
+                    analytics.logEvent(
+                        "review_error",
+                        mapOf(
+                            "message" to result.throwable.message
+                        )
+                    )
+                }
             }
         }
     }

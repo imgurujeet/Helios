@@ -27,6 +27,11 @@ dependencies {
     implementation(libs.compose.uiToolingPreview)
     implementation(libs.play.services.ads.api)
     debugImplementation(libs.compose.uiTooling)
+    implementation(libs.play.app.update)
+    implementation(libs.play.app.update.ktx)
+
+    implementation(libs.play.review)
+    implementation(libs.play.review.ktx)
 }
 
 android {
@@ -37,8 +42,8 @@ android {
         applicationId = "ai.achaialabs.helios"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 9
-        versionName = "1.0.9"
+        versionCode = 11
+        versionName = "1.1.0"
 
         val localProperties = Properties()
         val localFile = rootProject.file("local.properties")

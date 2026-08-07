@@ -206,7 +206,12 @@ fun <T> AdvancedResponsiveCarousel(
                     val nativeSlotWidthPx = availableW + pageSpacingPx
                     val nativeX = (availableW / 2f) - pageOffset * nativeSlotWidthPx
 
-                    finalTranslationX = targetX - nativeX
+                    finalTranslationX =
+                        if (items.size == 1) {
+                            -(availableW - mainWidthPx) / 2f
+                        } else {
+                            targetX - nativeX
+                        }
                 }
 
                 val sizeFraction = ((cardWidthPx - minorWidthPx) / (mainWidthPx - minorWidthPx)).coerceIn(0f, 1f)

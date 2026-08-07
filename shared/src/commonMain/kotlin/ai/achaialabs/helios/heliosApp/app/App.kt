@@ -32,6 +32,7 @@ import org.koin.compose.koinInject
 import org.koin.dsl.KoinAppDeclaration
 import ai.achaialabs.helios.BuildKonfig
 import ai.achaialabs.helios.heliosApp.ad.AdManager
+import ai.achaialabs.helios.heliosApp.app.update.UpdateResult
 import ai.achaialabs.helios.heliosApp.firebase.fcm.PushNotificationService
 import ai.achaialabs.helios.heliosApp.utils.SystemUiController
 import androidx.compose.foundation.background
@@ -47,6 +48,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,6 +56,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -79,6 +83,7 @@ fun App(
         val viewModel: MainViewModel = koinInject() // Inject the MainViewModel
         val pushNotificationService: PushNotificationService = koinInject()
         val appState by viewModel.appState.collectAsState()
+        val updateState by viewModel.updateState.collectAsState()
         LaunchedEffect(appState) {
             println("UI APP STATE = $appState")
         }
@@ -173,80 +178,147 @@ fun App(
                 }
             }
 
+            PermissionDialog(
+                visible = showNotificationDialog,
+                title = "\uD83E\uDD1D We Don't Spam",
+                description = "Get notified when fresh AI prompts, new features, and important updates are available. We'll only send notifications that matter.",
+                confirmText = "Send 'Em \uD83D\uDE80",
+                laterText = "\uD83E\uDD79 Convince Me Later",
+                icon = Icons.Rounded.NotificationsActive,
+                onDismiss = {
+                    viewModel.hideNotificationPrompt()
+                },
+                onConfirm = {
+                    viewModel.hideNotificationPrompt()
+                    onRequestNotificationPermission?.invoke()
+                },
+                onLater = {
+                    viewModel.postponeNotificationPrompt()
+                }
+            )
 
-            if (showNotificationDialog) {
 
-                Dialog(
-                    onDismissRequest = {
-                        viewModel.hideNotificationPrompt()
-                    }
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(28.dp),
-                        tonalElevation = 8.dp,
-                        color = MaterialTheme.colorScheme.surface
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .padding(24.dp)
-                                .fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
+            if (updateState == UpdateResult.UpdateDownloaded) {
+
+                AlertDialog(
+                    onDismissRequest = { },
+
+                    title = {
+                        Text("Update Ready")
+                    },
+
+                    text = {
+                        Text(
+                            "The latest version has finished downloading. Restart now to complete the update."
+                        )
+                    },
+
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                viewModel.completeUpdate()
+                            }
                         ) {
+                            Text("Restart")
+                        }
+                    },
 
-                            Box(
-                                modifier = Modifier
-                                    .size(72.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Rounded.NotificationsActive,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(34.dp)
-                                )
-                            }
-
-                            Spacer(Modifier.height(20.dp))
-
-                            Text(
-                                "Never Miss a Great Prompt",
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-
-                            Spacer(Modifier.height(12.dp))
-
-                            Text(
-                                "Get notified when fresh AI prompts, new features, and important updates are available. We'll only send notifications that matter.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            Spacer(Modifier.height(24.dp))
-
-                            Button(
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = {
-                                    viewModel.hideNotificationPrompt()
-                                    onRequestNotificationPermission?.invoke()
-                                }
-                            ) {
-                                Text("Keep Me Updated")
-                            }
-
-                            TextButton(
-                                onClick = {
-                                    viewModel.postponeNotificationPrompt()
-                                }
-                            ) {
-                                Text("Maybe Later")
-                            }
+                    dismissButton = {
+                        TextButton(
+                            onClick = { }
+                        ) {
+                            Text("Later")
                         }
                     }
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+fun PermissionDialog(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+    onLater: () -> Unit,
+    title: String,
+    description: String,
+    confirmText: String = "Continue",
+    laterText: String = "Maybe Later",
+    icon: ImageVector = Icons.Rounded.NotificationsActive,
+    modifier: Modifier = Modifier
+) {
+    if (!visible) return
+
+    Dialog(
+        onDismissRequest = onDismiss
+    ) {
+        Surface(
+            modifier = modifier,
+            shape = RoundedCornerShape(28.dp),
+            tonalElevation = 8.dp,
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFF59E0B).copy(0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color(0xFFF59E0B),
+                        modifier = Modifier.size(34.dp)
+                    )
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(Modifier.height(24.dp))
+
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onConfirm,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFF59E0B)
+                    )
+                ) {
+                    Text(confirmText)
+                }
+
+                TextButton(
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = Color(0xFFF59E0B)
+                    ),
+                    onClick = onLater
+                ) {
+                    Text(laterText)
                 }
             }
         }
@@ -254,3 +326,24 @@ fun App(
 }
 
 
+
+@Preview(
+    showBackground = true,
+    showSystemUi = true
+)
+@Composable
+private fun PermissionDialogPreview() {
+    MaterialTheme {
+        PermissionDialog(
+            visible = true,
+            title = "\uD83E\uDD1D We Don't Spam",
+            description = "Seriously. Just hand-picked AI prompts, major updates, and things that'll make your day a little better.",
+            confirmText = "Send 'Em \uD83D\uDE80",
+            laterText = "\uD83E\uDD79 Convince Me Later",
+            icon = Icons.Rounded.NotificationsActive,
+            onDismiss = {},
+            onConfirm = {},
+            onLater = {}
+        )
+    }
+}

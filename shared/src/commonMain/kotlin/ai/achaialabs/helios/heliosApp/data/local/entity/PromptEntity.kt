@@ -1,8 +1,11 @@
 package ai.achaialabs.helios.heliosApp.data.local.entity
 
+import ai.achaialabs.helios.heliosApp.domain.model.HomeFeedType
 import androidx.room.ColumnInfo
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.Relation
 
 @Entity(tableName = "prompts")
 data class PromptEntity(
@@ -37,4 +40,59 @@ data class PromptEntity(
 )
 
 
+@Entity(
+    tableName = "home_feed",
+    primaryKeys = ["feedType", "position"]
+)
+data class HomeFeedEntity(
 
+    val feedType: HomeFeedType,
+
+    val position: Int,
+
+    val promptId: String
+)
+
+
+
+@Entity(
+    tableName = "category_prompt_cross_ref",
+    primaryKeys = [
+        "categoryId",
+        "position"
+    ]
+)
+data class CategoryPromptCrossRef(
+
+    val categoryId: String,
+
+    val promptId: String,
+
+    val position: Int
+)
+
+
+data class HomePromptRelation(
+
+    @Embedded
+    val feed: HomeFeedEntity,
+
+    @Relation(
+        parentColumn = "promptId",
+        entityColumn = "id"
+    )
+    val prompt: PromptEntity
+)
+
+
+data class CategoryPromptRelation(
+
+    @Embedded
+    val crossRef: CategoryPromptCrossRef,
+
+    @Relation(
+        parentColumn = "promptId",
+        entityColumn = "id"
+    )
+    val prompt: PromptEntity
+)

@@ -6,6 +6,7 @@ import ai.achaialabs.helios.heliosApp.data.remote.datasource.ExploreRemoteDataSo
 import ai.achaialabs.helios.heliosApp.data.remote.mapper.toDto
 import ai.achaialabs.helios.heliosApp.data.remote.mapper.toEntity
 import ai.achaialabs.helios.heliosApp.data.remote.mapper.toPromptDto
+import ai.achaialabs.helios.heliosApp.domain.filter.PromptFilter
 import ai.achaialabs.helios.heliosApp.domain.model.ExploreCategory
 import ai.achaialabs.helios.heliosApp.domain.model.Prompt
 import ai.achaialabs.helios.heliosApp.domain.repository.ExploreRepository
@@ -44,10 +45,10 @@ class ExploreRepositoryImpl(
             runCatching {
                 // 1. FETCH API RESPONSES
                 val categoriesResult = remoteDataSource.fetchCategories(limit, offset).getOrThrow()
-                categoriesResult.size < limit
+               // categoriesResult.size < limit
                 // 2. MAP & SAVE CATEGORIES: ApiResponse -> DTO -> Entity -> Room
                 val categoryEntities = categoriesResult.map { it.toDto().toEntity() }
-                exploreDao.insertCategories(categoryEntities)
+              //  exploreDao.insertCategories(categoryEntities)
 
                 // 3. FETCH PROMPTS (Using the category IDs we just got)
                 val categoryIds = categoryEntities.map { it.id }
@@ -55,9 +56,15 @@ class ExploreRepositoryImpl(
 
                 // 4. MAP & SAVE PROMPTS: ApiResponse -> DTO -> Entity -> Room
                 val promptEntities = promptsResult.map { it.toPromptDto().toEntity() }
-                exploreDao.insertPrompts(promptEntities)
+               // exploreDao.insertPrompts(promptEntities)
+                val reachedEnd = categoriesResult.size < limit
 
-                categoriesResult.size < limit
+                exploreDao.insertExploreFeed(
+                    categories = categoryEntities,
+                    prompts = promptEntities
+                )
+
+                reachedEnd
 
             }.onFailure { e ->
 

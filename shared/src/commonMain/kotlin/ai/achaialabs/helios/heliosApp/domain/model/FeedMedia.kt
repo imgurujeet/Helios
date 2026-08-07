@@ -18,3 +18,11 @@ sealed interface FeedMedia {
         val aspectRatio: Float?
     ) : FeedMedia
 }
+
+
+enum class HomeFeedType {
+
+    LATEST,
+
+    POPULAR
+}

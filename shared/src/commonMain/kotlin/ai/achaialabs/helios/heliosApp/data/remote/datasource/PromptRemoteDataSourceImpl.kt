@@ -6,6 +6,8 @@ import ai.achaialabs.helios.heliosApp.data.remote.mapper.toHomeHeroDto
 import ai.achaialabs.helios.heliosApp.data.remote.mapper.toPromptDto
 import ai.achaialabs.helios.heliosApp.data.remote.response.HomeHeroApiResponse
 import ai.achaialabs.helios.heliosApp.data.remote.response.PromptApiResponse
+import ai.achaialabs.helios.heliosApp.domain.filter.PromptFilter
+import ai.achaialabs.helios.heliosApp.domain.model.HomeFeedType
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
@@ -16,13 +18,11 @@ class PromptRemoteDataSourceImpl(
     private val supabaseClient: SupabaseClient
 ) : PromptRemoteDataSource {
 
-    override suspend fun getHomePrompts(page: Int, pageSize: Int): List<PromptDto> {
+    override suspend fun getHomePrompts(page: Int, pageSize: Int,   feedType: HomeFeedType): List<PromptDto> {
         val fromIndex = (page * pageSize).toLong()
         val toIndex = fromIndex + pageSize - 1
-
-
         val apiResponse = supabaseClient
-                .postgrest["prompts_with_user_state"]
+            .postgrest["prompts_with_user_state"]
             .select(
                 Columns.raw(
                     """
@@ -34,7 +34,18 @@ class PromptRemoteDataSourceImpl(
                 )
             ) {
                 range(fromIndex, toIndex)
-                order("created_at", Order.DESCENDING)
+                when (feedType) {
+                    HomeFeedType.POPULAR -> {
+                        order("likes_count", Order.DESCENDING)
+                        order("created_at", Order.DESCENDING)
+                        order("id", Order.DESCENDING)
+                    }
+
+                    HomeFeedType.LATEST -> {
+                        order("created_at", Order.DESCENDING)
+                        order("id", Order.DESCENDING)
+                    }
+                }
             }
             .decodeList<PromptApiResponse>()
 
@@ -46,7 +57,6 @@ class PromptRemoteDataSourceImpl(
 
 
     }
-
 
     override suspend fun searchPrompts(query: String): List<PromptDto> {
 

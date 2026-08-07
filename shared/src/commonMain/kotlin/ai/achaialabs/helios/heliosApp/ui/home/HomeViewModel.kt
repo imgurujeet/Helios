@@ -1,9 +1,12 @@
 package ai.achaialabs.helios.heliosApp.ui.home
 
 import ai.achaialabs.helios.heliosApp.ad.AdManager
+import ai.achaialabs.helios.heliosApp.domain.filter.PromptFilter
+import ai.achaialabs.helios.heliosApp.domain.model.HomeFeedType
 import ai.achaialabs.helios.heliosApp.domain.usecase.GetHomeHeroesUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.GetHomePromptsUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.GetPremiumStatusUseCase
+import ai.achaialabs.helios.heliosApp.domain.usecase.GetRemixPromptsUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.RefreshHomeDataUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.ToggleBookmarkUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.ToggleLikeUseCase
@@ -12,6 +15,7 @@ import ai.achaialabs.helios.heliosApp.domain.usecase.SyncHomePromptsUseCase
 import ai.achaialabs.helios.heliosApp.firebase.Inappmessaging.InAppMessagingService
 import ai.achaialabs.helios.heliosApp.firebase.analytics.AnalyticsService
 import ai.achaialabs.helios.heliosApp.firebase.crashlytics.CrashlyticsService
+import ai.achaialabs.helios.heliosApp.ui.home.components.HomeTab
 import ai.achaialabs.helios.heliosApp.ui.mapper.toUi
 import ai.achaialabs.helios.heliosApp.ui.model.HomeHeroUi
 import ai.achaialabs.helios.heliosApp.ui.model.PromptUi
@@ -21,8 +25,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -36,6 +42,7 @@ class HomeViewModel(
     private val toggleLikeUseCase: ToggleLikeUseCase,
     private val toggleBookmarkUseCase: ToggleBookmarkUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val getRemixPromptsUseCase: GetRemixPromptsUseCase,
     private val adManager: AdManager,
     private val getPremiumStatusUseCase: GetPremiumStatusUseCase,
     private val crashlytics: CrashlyticsService,
@@ -46,11 +53,13 @@ class HomeViewModel(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState = _uiState.asStateFlow()
 
+
     // --- Pagination Trackers ---
     private val _currentLimit = MutableStateFlow(20) // Initial limit
     private var currentPage = 0
     private var isSyncing = false
     private var hasReachedEnd = false
+    private val adPositions = mutableSetOf<Int>()
 
 
     val isPremium: StateFlow<Boolean> = getPremiumStatusUseCase()
@@ -61,12 +70,35 @@ class HomeViewModel(
         )
 
     init {
+        observePremiumStatus()
         setupOfflineFirstObservation()
         setupHeroesAndUser()
         observeNativeAds()
 
         // Fetch the very first page of data from Supabase
         refresh()
+    }
+
+
+    private fun observePremiumStatus() {
+        getPremiumStatusUseCase()
+            .onEach { isPremium ->
+
+                _uiState.update { state ->
+
+                    val showAds = !isPremium
+
+                    state.copy(
+                        showAds = showAds,
+                        adPositions =
+                            if (showAds)
+                                ensureAdPositions(state.prompts.size)
+                            else
+                                emptySet()
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun observeNativeAds() {
@@ -84,15 +116,38 @@ class HomeViewModel(
     }
 
     private fun setupOfflineFirstObservation() {
-        // UI listens to Room. Room limits based on _currentLimit.
-        _currentLimit
-            .flatMapLatest { limit -> getHomePromptsUseCase(limit) }
+        uiState
+            .map { it.selectedTab }
+            .flatMapLatest { tab ->
+
+                when (tab) {
+
+                    HomeTab.POPULAR ->
+                        getHomePromptsUseCase(HomeFeedType.POPULAR)
+
+                    HomeTab.LATEST ->
+                        getHomePromptsUseCase(HomeFeedType.LATEST)
+
+                    HomeTab.REMIX ->
+                        getRemixPromptsUseCase()
+                }
+            }
             .onEach { prompts ->
+
+                val promptUi = prompts.map { it.toUi() }
+
                 _uiState.update { state ->
+
+                    val positions =
+                        if (state.showAds) {
+                            ensureAdPositions(promptUi.size)
+                        } else {
+                            emptySet()
+                        }
+
                     state.copy(
-                        prompts = prompts.map { it.toUi() },
-                        // Stop initial loading once Room has data
-                        isLoading = prompts.isEmpty() && isSyncing
+                        prompts = promptUi,
+                        adPositions = positions
                     )
                 }
             }
@@ -117,17 +172,31 @@ class HomeViewModel(
 
     // 1. Pull-to-Refresh: Wipes cache and starts over at Page 0
     fun refresh() {
+
+        adPositions.clear()
+
         if (isSyncing) return
 
         viewModelScope.launch {
             isSyncing = true
             currentPage = 0
             hasReachedEnd = false
-            _currentLimit.value = 20 // Reset Room observation limit
             _uiState.update { it.copy(isLoading = true) }
 
             try {
-                refreshHomeDataUseCase()
+                when (uiState.value.selectedTab) {
+
+                    HomeTab.POPULAR ->
+                        refreshHomeDataUseCase(HomeFeedType.POPULAR)
+
+                    HomeTab.LATEST ->
+                        refreshHomeDataUseCase(HomeFeedType.LATEST)
+
+                    HomeTab.REMIX -> {
+                        refreshHomeDataUseCase(HomeFeedType.POPULAR)
+                        refreshHomeDataUseCase(HomeFeedType.LATEST)
+                    }
+                }
             } catch (e: Exception) {
                 crashlytics.log("Home refresh failed")
                 crashlytics.recordException(e)
@@ -144,14 +213,45 @@ class HomeViewModel(
         analytics.logEvent("home_load_more")
         if (isSyncing || hasReachedEnd || uiState.value.isLoading) return
 
-        currentPage++
-        _currentLimit.value += 20 // Tell Room to expose 20 more items
+        currentPage++ // Tell Room to expose 20 more items
 
         viewModelScope.launch {
             isSyncing = true
             _uiState.update { it.copy(isPaginating = true) }
 
-            val result = syncHomePromptsUseCase(page = currentPage, pageSize = 20)
+            val result = when (uiState.value.selectedTab) {
+
+                HomeTab.POPULAR ->
+                    syncHomePromptsUseCase(
+                        page = currentPage,
+                        pageSize = 20,
+                        feedType = HomeFeedType.POPULAR
+                    )
+
+                HomeTab.LATEST ->
+                    syncHomePromptsUseCase(
+                        page = currentPage,
+                        pageSize = 20,
+                        feedType = HomeFeedType.LATEST
+                    )
+
+                HomeTab.REMIX -> {
+
+                    val popularResult = syncHomePromptsUseCase(
+                        page = currentPage,
+                        pageSize = 20,
+                        feedType = HomeFeedType.POPULAR
+                    )
+
+                    syncHomePromptsUseCase(
+                        page = currentPage,
+                        pageSize = 20,
+                        feedType = HomeFeedType.LATEST
+                    )
+
+                    popularResult
+                }
+            }
 
             result.onSuccess { isEnd ->
                 hasReachedEnd = isEnd
@@ -167,9 +267,55 @@ class HomeViewModel(
         }
     }
 
+    fun onFeedSelected(feedType: HomeTab) {
 
+        adPositions.clear()
+
+        if (uiState.value.selectedTab == feedType) return
+
+        viewModelScope.launch {
+            currentPage = 0
+            hasReachedEnd = false
+
+            _uiState.update {
+                it.copy(
+                    selectedTab = feedType,
+                    isPromptRefreshing = true
+                )
+            }
+
+            try {
+                when (uiState.value.selectedTab) {
+
+                    HomeTab.POPULAR ->
+                        refreshHomeDataUseCase(HomeFeedType.POPULAR)
+
+                    HomeTab.LATEST ->
+                        refreshHomeDataUseCase(HomeFeedType.LATEST)
+
+                    HomeTab.REMIX -> {
+                        refreshHomeDataUseCase(HomeFeedType.POPULAR)
+                        refreshHomeDataUseCase(HomeFeedType.LATEST)
+                    }
+                }
+            } catch (e: Exception) {
+                crashlytics.log("Filter refresh failed")
+                crashlytics.recordException(e)
+
+                _uiState.update {
+                    it.copy(error = e.message)
+                }
+            } finally {
+                _uiState.update {
+                    it.copy(isPromptRefreshing = false)
+                }
+            }
+        }
+    }
     // 3. Optimistic Updates
     fun onLikeClick(promptId: String) {
+
+        println("LIKE: $promptId")
         analytics.logEvent(
             "prompt_liked",
             mapOf("prompt_id" to promptId)
@@ -238,5 +384,29 @@ class HomeViewModel(
         inAppMessagingService.triggerEvent("home_opened")
     }
 
+
+    private fun ensureAdPositions(
+        totalPrompts: Int,
+        firstAdAfter: Int = 8,
+        minGap: Int = 6,
+        maxGap: Int = 10
+    ): Set<Int> {
+
+        if (adPositions.isEmpty()) {
+            adPositions += firstAdAfter
+        }
+
+        while (adPositions.last() < totalPrompts) {
+
+            val next =
+                adPositions.last() + (minGap..maxGap).random()
+
+            adPositions += next
+        }
+
+        return adPositions.filter {
+            it < totalPrompts
+        }.toSet()
+    }
 
 }

@@ -6,6 +6,7 @@ import ai.achaialabs.helios.heliosApp.data.local.entity.ToolEntity
 import ai.achaialabs.helios.heliosApp.data.remote.dto.CategoryDto
 import ai.achaialabs.helios.heliosApp.data.remote.dto.PromptDto
 import ai.achaialabs.helios.heliosApp.data.remote.dto.ToolDto
+import ai.achaialabs.helios.heliosApp.domain.filter.PromptFilter
 import ai.achaialabs.helios.heliosApp.domain.model.*
 
 /**
@@ -40,7 +41,7 @@ fun PromptDto.toEntity(): PromptEntity {
         isPremium = this.isPremium,
         tooId = tool?.id ?:"",
         tooName = tool?.name ?:"",
-        tooIconUrl = tool?.iconUrl ?:""
+        tooIconUrl = tool?.iconUrl ?:"",
     )
 }
 

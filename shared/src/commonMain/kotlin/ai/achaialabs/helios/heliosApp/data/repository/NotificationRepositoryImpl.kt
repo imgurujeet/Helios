@@ -20,7 +20,15 @@ class NotificationRepositoryImpl(
 
         supabase
             .from("user_fcm_tokens")
-            .upsert(
+            .delete {
+                filter {
+                    eq("token", token)
+                }
+            }
+
+        supabase
+            .from("user_fcm_tokens")
+            .insert(
                 FcmTokenDto(
                     user_id = user.id,
                     token = token,

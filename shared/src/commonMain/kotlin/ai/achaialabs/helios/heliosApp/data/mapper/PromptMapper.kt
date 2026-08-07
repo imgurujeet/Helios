@@ -1,6 +1,7 @@
 package ai.achaialabs.helios.heliosApp.data.mapper
 
 import ai.achaialabs.helios.heliosApp.data.local.entity.PromptEntity
+import ai.achaialabs.helios.heliosApp.domain.filter.PromptFilter
 import ai.achaialabs.helios.heliosApp.domain.model.*
 
 fun PromptEntity.toDomain(): Prompt {
@@ -62,7 +63,9 @@ fun PromptEntity.toDomain(): Prompt {
     )
 }
 
-fun Prompt.toEntity(): PromptEntity {
+fun Prompt.toEntity(
+    feedType: PromptFilter
+): PromptEntity {
     return PromptEntity(
         id = id,
 
@@ -114,6 +117,6 @@ fun Prompt.toEntity(): PromptEntity {
         isPremium = isPremium,
         tooId = recommendedTools?.id ?: "",
         tooName = recommendedTools?.name?: "",
-        tooIconUrl = recommendedTools?.iconUrl?: ""
+        tooIconUrl = recommendedTools?.iconUrl?: "",
     )
 }

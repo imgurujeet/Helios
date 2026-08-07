@@ -2,9 +2,12 @@ package ai.achaialabs.helios.heliosApp.ui.promptDetail
 
 import ai.achaialabs.helios.heliosApp.ad.AdManager
 import ai.achaialabs.helios.heliosApp.ad.RewardedAdState
+import ai.achaialabs.helios.heliosApp.domain.filter.PromptFilter
+import ai.achaialabs.helios.heliosApp.domain.model.HomeFeedType
 import ai.achaialabs.helios.heliosApp.domain.model.Prompt
 import ai.achaialabs.helios.heliosApp.domain.model.Tool
 import ai.achaialabs.helios.heliosApp.domain.usecase.GetHomePromptsUseCase
+import ai.achaialabs.helios.heliosApp.domain.usecase.ObservePromptByIdUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.ObserveToolsUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.SyncToolsUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.ToggleBookmarkUseCase
@@ -52,15 +55,14 @@ data class PromptDetailUiState(
 
 class PromptDetailViewModel(
     private val observeToolsUseCase: ObserveToolsUseCase,
-    private val getHomePromptsUseCase: GetHomePromptsUseCase,
-    private val categoryId: String?,
     private val syncToolsUseCase: SyncToolsUseCase,
     private val toggleLikeUseCase: ToggleLikeUseCase,
     private val toggleBookmarkUseCase: ToggleBookmarkUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val observePromptsByCategoryUseCase: ObservePromptsByCategoryUseCase,
     private val adManager: AdManager,
-    private val inAppMessagingService: InAppMessagingService
+    private val inAppMessagingService: InAppMessagingService,
+    private val observePromptByIdUseCase: ObservePromptByIdUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PromptDetailUiState())
@@ -68,10 +70,12 @@ class PromptDetailViewModel(
     // Public immutable state exposed to UI
     val uiState: StateFlow<PromptDetailUiState> = _uiState.asStateFlow()
 
-    // Flag to ensure we only find the initial index once
-    private var initializedForPromptId: String? = null
-    private var itemsToDrop = 0
     private var feedJob: Job? = null
+    private var categoryJob: Job? = null
+    private var observedCategoryId: String? = null
+
+    private var initialPageSet = false
+
 
     init {
         // STEP 1: Start observing Room database changes for tools
@@ -109,40 +113,110 @@ class PromptDetailViewModel(
     }
 
     // Call this from your Compose screen via a LaunchedEffect
-    fun initializeFeed(clickedPromptId: String) {
+    fun initializeFeed(
+        clickedPromptId: String
+    ) {
 
         feedJob?.cancel()
+        categoryJob?.cancel()
 
-        val feedFlow = if (categoryId != null) {
+        observedCategoryId = null
+        initialPageSet = false
+
+
+        _uiState.update {
+            it.copy(
+                isLoading = true,
+                error = null
+            )
+        }
+
+        feedJob =
+            observePromptByIdUseCase(clickedPromptId)
+                .onEach { prompt ->
+
+                    if (prompt == null) {
+
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = "Prompt not found"
+                            )
+                        }
+
+                        return@onEach
+                    }
+
+                    if (observedCategoryId != prompt.category.id) {
+                        observedCategoryId = prompt.category.id
+
+                        observeCategory(
+                            categoryId = prompt.category.id,
+                            clickedPromptId = clickedPromptId
+                        )
+                    }
+
+                }
+                .launchIn(viewModelScope)
+    }
+
+    private fun observeCategory(
+        categoryId: String,
+        clickedPromptId: String
+    ) {
+
+        categoryJob?.cancel()
+
+        categoryJob =
             observePromptsByCategoryUseCase(
-                categoryId,
+                categoryId = categoryId,
                 limit = 100,
                 offset = 0
             )
-        } else {
-            getHomePromptsUseCase(limit = 100)
-        }
+                .onEach { prompts ->
 
-        feedJob = feedFlow
-            .onEach { fullFeed ->
+                    val index =
+                        prompts.indexOfFirst {
+                            it.id == clickedPromptId
+                        }
 
-                val clickedIndex =
-                    fullFeed.indexOfFirst {
-                        it.id == clickedPromptId
-                    }.coerceAtLeast(0)
+                    if (index == -1) {
 
-                val slicedFeed =
-                    fullFeed.drop(clickedIndex)
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = "Prompt not found"
+                            )
+                        }
 
-                _uiState.update {
-                    it.copy(
-                        isLoading = slicedFeed.isEmpty(),
-                        prompts = slicedFeed,
-                        initialPageIndex = 0
-                    )
+                        return@onEach
+                    }
+
+                    if (!initialPageSet) {
+
+                        initialPageSet = true
+
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                prompts = prompts,
+                                initialPageIndex = index
+                            )
+                        }
+
+                    } else {
+
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                prompts = prompts
+                            )
+                        }
+
+                    }
+
                 }
-            }
-            .launchIn(viewModelScope)
+                .launchIn(viewModelScope)
     }
 
     private fun observeTools() {
@@ -227,7 +301,7 @@ class PromptDetailViewModel(
         when (currentState.rewardedAdState) {
 
             RewardedAdState.Loaded -> {
-
+                println("Loaded -> show ad")
                 adManager.showRewardedAd {
 
                     unlockPrompt(promptId)
@@ -235,18 +309,21 @@ class PromptDetailViewModel(
             }
 
             RewardedAdState.Loading -> {
-
+                println("Loading")
                 // loader already shown in UI
             }
 
             RewardedAdState.Showing -> {
+                println("Showing")
 
                 // prevent multiple taps
             }
 
-            RewardedAdState.Idle,
+            RewardedAdState.Idle -> {
+                println("Idle")
+            }
             is RewardedAdState.Error -> {
-
+                println("Error -> fallback UX")
                 // fallback UX
 
                 unlockPrompt(promptId)

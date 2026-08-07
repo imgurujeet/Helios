@@ -12,6 +12,7 @@ import ai.achaialabs.helios.heliosApp.ui.promptDetail.components.LaunchControlCa
 import ai.achaialabs.helios.heliosApp.ui.promptDetail.components.PromptContentCard
 import ai.achaialabs.helios.heliosApp.ui.promptDetail.components.PromptDetailTopBar
 import ai.achaialabs.helios.heliosApp.ui.promptDetail.components.PromptInstructionCard
+import ai.achaialabs.helios.heliosApp.ui.share.components.PreparingShareDialog
 import ai.achaialabs.helios.heliosApp.ui.share.components.PromptShareCard
 import ai.achaialabs.helios.heliosApp.ui.share.manager.ShareManager
 import ai.achaialabs.helios.heliosApp.ui.share.model.SharePromptUi
@@ -46,6 +47,7 @@ import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -87,11 +89,9 @@ val GlassBorder = Color.White.copy(alpha = 0.12f)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PromptDetailScreen(
-    categoryId: String?,
     promptId: String, // The ID passed from your navigation arguments
     viewModel: PromptDetailViewModel = koinViewModel(
-        key = categoryId,
-        parameters = { parametersOf(categoryId) }
+        key = promptId
     ),
     onBackClick: () -> Unit,
     onSubScribeClick: () -> Unit
@@ -101,6 +101,9 @@ fun PromptDetailScreen(
     val clipboardManager = LocalClipboardManager.current
     var sharePrompt by remember {
         mutableStateOf<Prompt?>(null)
+    }
+    var showPreparingShare by remember {
+        mutableStateOf(false)
     }
     var shareCardReady by remember {
         mutableStateOf(false)
@@ -119,6 +122,7 @@ fun PromptDetailScreen(
         viewModel.onPromptDetailOpened()
     }
 
+
     LaunchedEffect(
         sharePrompt,
         shareCardReady
@@ -128,13 +132,14 @@ fun PromptDetailScreen(
             sharePrompt != null &&
             shareCardReady
         ) {
-
+            showPreparingShare = false
             delay(500)
 
             val imageBitmap =
                 graphicsLayer.toImageBitmap()
 
             shareManager.sharePrompt(
+
                 imageBitmap
             )
 
@@ -145,6 +150,9 @@ fun PromptDetailScreen(
     }
 
 
+    if (showPreparingShare) {
+        PreparingShareDialog()
+    }
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -172,12 +180,6 @@ fun PromptDetailScreen(
                     initialPage = uiState.initialPageIndex,
                     pageCount = { uiState.prompts.size + 1 }
                 )
-
-                LaunchedEffect(uiState.initialPageIndex) {
-                    if (pagerState.currentPage != uiState.initialPageIndex) {
-                        pagerState.scrollToPage(uiState.initialPageIndex)
-                    }
-                }
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
@@ -216,7 +218,9 @@ fun PromptDetailScreen(
                                         },
                                         isPlaying = isFocused,
                                         onShareClick = {
+                                            showPreparingShare = true
                                             sharePrompt = currentPrompt
+
                                         }
                                     )
 //                                    Spacer(modifier = Modifier.height(16.dp))
@@ -304,6 +308,33 @@ fun PromptDetailScreen(
                 }
             }
 
+//            if (showPreparingShare) {
+//                Box(
+//                    modifier = Modifier
+//                        .fillMaxSize()
+//                        .background(Color.Black.copy(alpha = 0.35f)),
+//                    contentAlignment = Alignment.Center
+//                ) {
+//                    Surface(
+//                        shape = RoundedCornerShape(20.dp)
+//                    ) {
+//                        Column(
+//                            modifier = Modifier.padding(24.dp),
+//                            horizontalAlignment = Alignment.CenterHorizontally
+//                        ) {
+//                            LoadingIndicator(
+//                                modifier = Modifier.size(56.dp),
+//                                color = Color(0xF0D55900),
+//                            )
+//
+//                            Spacer(Modifier.height(16.dp))
+//
+//                            Text("Preparing image...")
+//                        }
+//                    }
+//                }
+//            }
+
 
         }
 
@@ -336,8 +367,9 @@ fun PromptDetailScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Transparent)
-                   
+                    .background(Color.Transparent),
+                contentAlignment = Alignment.Center
+
             ) {
 
                 PromptShareCard(
@@ -364,6 +396,9 @@ fun PromptDetailScreen(
                 )
             }
         }
+
+
+
     }
 }
 

@@ -2,7 +2,9 @@ package ai.achaialabs.helios.heliosApp.ui.home.components
 
 import ai.achaialabs.helios.heliosApp.ad.NativeAdCard
 import ai.achaialabs.helios.heliosApp.ad.NativeAdState
+import ai.achaialabs.helios.heliosApp.domain.filter.PromptFilter
 import ai.achaialabs.helios.heliosApp.domain.model.HeroAction
+import ai.achaialabs.helios.heliosApp.domain.model.HomeFeedType
 import ai.achaialabs.helios.heliosApp.domain.model.Prompt
 import ai.achaialabs.helios.heliosApp.ui.CosmicLottieLoader
 import ai.achaialabs.helios.heliosApp.ui.home.HomeUiState
@@ -19,37 +21,72 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
+
+
+sealed interface HomeFeedItem {
+
+    data class PromptItem(
+        val prompt: PromptUi
+    ) : HomeFeedItem
+
+    data class AdItem(
+        val afterPrompt: Int
+    ) : HomeFeedItem
+}
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeScreenContent(
     uiState: HomeUiState,
     modifier: Modifier = Modifier,
-    listState: LazyListState = rememberLazyListState(),
+    selectedFilter: HomeTab,
+    onFilterSelected: (HomeTab) -> Unit,
+    listState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     onPlayClick: (String) -> Unit = {},
     onLikeClick: (String) -> Unit = {},
     onShareClick: (PromptUi) -> Unit = {},
@@ -74,183 +111,176 @@ fun HomeScreenContent(
         }
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier
-            .fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 100.dp)
+    val feedItems = remember(
+        uiState.prompts,
+        uiState.adPositions,
+        uiState.showAds,
     ) {
 
-        item {
+        buildList<HomeFeedItem> {
 
-            if (uiState.heroes.isNotEmpty()) {
+            uiState.prompts.forEachIndexed { index, prompt ->
 
-                Spacer(Modifier.height(12.dp))
-                HomeHero(
-                    heroes = uiState.heroes,
-                    onHeroClick = { hero ->
-                        println("Content received: ${hero.action}")
-                        onHeroClick(hero.action)
-                    }
-                )
-            }
-
-            Spacer(Modifier.height(20.dp))
-            SectionTitle(
-                title = "Discover Prompts"
-            )
-
-            Spacer(Modifier.height(20.dp))
-        }
-
-        val chunkedPrompts = uiState.prompts.chunked(2)
-
-        itemsIndexed(chunkedPrompts) { index, rowItems ->
-
-            Column {
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-
-                    horizontalArrangement =
-                        Arrangement.spacedBy(12.dp)
-                ) {
-
-                    rowItems.forEach { prompt ->
-
-                        PromptCard(
-
-                            prompt = prompt,
-
-                            modifier =
-                                Modifier.weight(1f),
-
-                            isPlaying =
-                                uiState.activeVideoId ==
-                                        prompt.id,
-
-                            onPlayClick = {
-                                onPlayClick(prompt.id)
-                            },
-
-                            onCardClick = {
-                                onPromptClick(prompt.id)
-                            },
-
-                            onLikeClick = {
-                                onLikeClick(prompt.id)
-                            },
-
-                            onShareClick = {
-                                onShareClick(prompt)
-                            }
-                        )
-                    }
-
-                    if (rowItems.size == 1) {
-
-                        Spacer(
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                // SHOW AD AFTER EVERY 4 PROMPTS
-                // each row = 2 prompts
-                // every 2 rows = 4 prompts
-
-                val shouldShowAd =
-                    index != 0 &&
-                            index % 2 == 1
+                add(HomeFeedItem.PromptItem(prompt))
 
                 if (
-                    shouldShowAd &&
-                    uiState.nativeAdState is NativeAdState.Loaded
+                    uiState.showAds &&
+                    uiState.nativeAdState is NativeAdState.Loaded &&
+                    (index + 1) in uiState.adPositions
                 ) {
-
-                    Spacer(
-                        modifier = Modifier.height(4.dp)
+                    add(
+                        HomeFeedItem.AdItem(
+                            afterPrompt = index + 1
+                        )
                     )
+                }
+            }
+        }
+    }
 
-                    NativeAdCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                    )
 
-                    Spacer(
-                        modifier = Modifier.height(4.dp)
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(2),
+        state = listState,
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = 12.dp,
+            end = 12.dp,
+            bottom = 100.dp
+        ),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalItemSpacing = 8.dp
+    ) {
+
+
+        item(span = StaggeredGridItemSpan.FullLine) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+
+                Spacer(Modifier.height(12.dp))
+
+                if (uiState.heroes.isNotEmpty()) {
+                    HomeHero(
+                        heroes = uiState.heroes,
+                        onHeroClick = { hero ->
+                            onHeroClick(hero.action)
+                        }
                     )
                 }
 
-
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
             }
         }
-    }
-}
 
-
-
-@Composable
-fun HomeScreenLoader(
-    modifier: Modifier = Modifier
-) {
-    val cosmicTexts = remember {
-        listOf(
-            "Scanning galaxies...",
-            "Exploring prompt universe...",
-            "Decoding constellations...",
-            "Traversing neural cosmos...",
-            "Orbiting visual worlds...",
-            "Discovering cinematic prompts...",
-            "Synchronizing cosmic archives..."
-        )
-    }
-
-    var currentTextIndex by remember { mutableStateOf(0) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(1800)
-            currentTextIndex = (currentTextIndex + 1) % cosmicTexts.size
-        }
-    }
-
-    // Using Surface provides a clean, theme-aware background
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            CosmicLottieLoader()
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            AnimatedContent(
-                targetState = cosmicTexts[currentTextIndex],
-                label = "cosmicText"
-            ) { text ->
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+        item(span = StaggeredGridItemSpan.FullLine) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                PromptButtonGroup(
+                    selected = selectedFilter,
+                    onSelected = onFilterSelected
                 )
+
+                Spacer(Modifier.height(10.dp))
             }
+        }
 
-            Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = "Entering the cosmic archive",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
+
+        if(uiState.isPromptRefreshing){
+            item(span = StaggeredGridItemSpan.FullLine) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    contentAlignment = androidx.compose.ui.Alignment.Center
+                ) {
+                    LinearWavyProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color(0xF0D55900),
+                        amplitude =1f,
+
+                        // Controls the wavelength frequency multiplier
+                        wavelength = 20.dp,
+                        stroke = Stroke(
+                            width = with(LocalDensity.current) { 5.dp.toPx() },
+                            cap = StrokeCap.Round
+                        ),
+                        waveSpeed = 5.dp
+                    )
+                }
+            }
+        }else{
+
+            items(
+                items = feedItems,
+                key = {
+                    when (it) {
+                        is HomeFeedItem.PromptItem ->
+                            it.prompt.id
+
+                        is HomeFeedItem.AdItem ->
+                            "ad_after_${it.afterPrompt}"
+                    }
+                },
+                span = {
+                    when (it) {
+                        is HomeFeedItem.PromptItem ->
+                            StaggeredGridItemSpan.SingleLane
+
+                        is HomeFeedItem.AdItem ->
+                            StaggeredGridItemSpan.FullLine
+                    }
+                }
+            ) { item ->
+
+                when (item) {
+
+                    is HomeFeedItem.PromptItem -> {
+
+                        val prompt = item.prompt
+
+                        PromptCard(
+                            prompt = prompt,
+                            modifier = Modifier.fillMaxWidth(),
+                            isPlaying = uiState.activeVideoId == prompt.id,
+                            onPlayClick = { onPlayClick(prompt.id) },
+                            onCardClick = { onPromptClick(prompt.id) },
+                            onLikeClick = { onLikeClick(prompt.id) },
+                            onShareClick = { onShareClick(prompt) }
+                        )
+                    }
+
+                    is HomeFeedItem.AdItem -> {
+
+                        NativeAdCard(
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+        }
+
+
+            if (uiState.isPaginating) {
+                item(span = StaggeredGridItemSpan.FullLine) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally){
+                            LoadingIndicator(modifier = Modifier.size(32.dp), color = Color(0xF0D55900))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Loading...", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+
+                    }
+
+                }
+            }
         }
     }
 }
+
