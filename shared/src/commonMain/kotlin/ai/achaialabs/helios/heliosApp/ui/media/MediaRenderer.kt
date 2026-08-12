@@ -19,7 +19,9 @@ fun MediaRenderer(
 
             ImageMedia(
                 url = media.imageUrl,
+                aspectRatio = media.aspectRatio,
                 modifier = modifier,
+
             )
         }
 
@@ -28,6 +30,7 @@ fun MediaRenderer(
             VideoMedia(
                 videoUrl = media.videoUrl,
                 thumbnail = media.thumbnailUrl,
+                aspectRatio = media.aspectRatio,
                 modifier = modifier,
                 isPlaying = isPlaying,
                 onPlayClick = onPlayClick,

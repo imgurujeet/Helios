@@ -109,7 +109,7 @@ fun HeroImageSection(
     val effectiveIsPlaying = isPlaying && !manuallyPaused
 
     Box(
-        modifier = modifier
+        modifier = Modifier
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -121,8 +121,8 @@ fun HeroImageSection(
 
         MediaRenderer(
             media = mediaUi,
-            modifier = Modifier
-                .fillMaxSize()
+            modifier = modifier
+                //.fillMaxSize()
                 .border(1.dp, GlassBorder, RoundedCornerShape(28.dp))
                 .clip(RoundedCornerShape(28.dp))
                 .clickable {
@@ -273,11 +273,11 @@ fun HeroImageSection(
                     tint = Color.White,
                     onClick = onShareClick
                 )
-//                CosmicMediaAction(
-//                    icon = Icons.Rounded.Fullscreen,
-//                    tint = Color.White,
-//                    onClick = onFullScreenClick
-//                )
+                CosmicMediaAction(
+                    icon = Icons.Rounded.Fullscreen,
+                    tint = Color.White,
+                    onClick = {  showFullScreen = true }
+                )
             }
         }
     }

@@ -7,7 +7,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -33,22 +35,26 @@ import coil3.compose.AsyncImage
 fun VideoMedia(
     videoUrl: String,
     thumbnail: String?,
+    aspectRatio: Float?,
     modifier: Modifier = Modifier,
     isPlaying: Boolean = false,
     onPlayClick: (() -> Unit)? = null,
     customPlayButton: (@Composable () -> Unit)? = null
-
 ) {
-
     var isVideoReady by remember(isPlaying) {
         mutableStateOf(false)
     }
 
+    val ratio = aspectRatio
+        ?.takeIf { it > 0f }
+        ?.coerceIn(0.55f, 1.8f)
+        ?: 1f
+
     Box(
         modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(ratio)
     ) {
-
-        // VIDEO PLAYER
 
         if (isPlaying) {
 
@@ -62,8 +68,6 @@ fun VideoMedia(
                 }
             )
         }
-
-        // THUMBNAIL
 
         AnimatedVisibility(
             visible = !isPlaying || !isVideoReady,
@@ -91,13 +95,10 @@ fun VideoMedia(
 
         if (customPlayButton != null) {
 
-            // If the parent passed a custom button, draw it exactly as they designed it!
             customPlayButton()
 
         } else if (onPlayClick != null) {
 
-            // 2. 🚀 FIX: Only draw the fallback button if they actually provided a click action!
-            // Because of the 'if' check above, Kotlin "smart casts" onPlayClick to be non-null here!
             Surface(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -108,14 +109,16 @@ fun VideoMedia(
                             MutableInteractionSource()
                         }
                     ) {
-                        // This is now 100% safe!
                         onPlayClick()
                     },
                 shape = CircleShape,
                 color = Color.Black.copy(alpha = 0.45f)
             ) {
                 Icon(
-                    imageVector = if (!isPlaying) Icons.Default.PlayArrow else Icons.Default.Pause,
+                    imageVector = if (!isPlaying)
+                        Icons.Default.PlayArrow
+                    else
+                        Icons.Default.Pause,
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier
@@ -125,7 +128,6 @@ fun VideoMedia(
             }
         }
     }
-
 }
 
 @Composable

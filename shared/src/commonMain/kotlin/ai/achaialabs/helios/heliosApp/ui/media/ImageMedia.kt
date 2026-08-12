@@ -1,5 +1,7 @@
 package ai.achaialabs.helios.heliosApp.ui.media
 
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -15,28 +17,19 @@ import kotlin.math.absoluteValue
 @Composable
 fun ImageMedia(
     url: String,
+    aspectRatio: Float?,
     modifier: Modifier = Modifier
 ) {
-    var loaded by remember { mutableStateOf(false) }
-    val placeholderHeight = remember(url) {
-        when (url.hashCode().absoluteValue % 4) {
-            0 -> 180.dp
-            1 -> 240.dp
-            2 -> 300.dp
-            else -> 360.dp
-        }
-    }
+    val ratio = aspectRatio
+        ?.takeIf { it > 0f }
+        ?: 1f
 
     AsyncImage(
         model = url,
         contentDescription = null,
-        modifier = modifier.then(
-            if (!loaded) Modifier.height(placeholderHeight)
-            else Modifier
-        ),
-        contentScale = ContentScale.Crop,
-        onSuccess = {
-            loaded = true
-        }
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(ratio),
+        contentScale = ContentScale.Crop
     )
 }
