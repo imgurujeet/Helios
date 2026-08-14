@@ -6,8 +6,10 @@ import ai.achaialabs.helios.heliosApp.ui.promptDetail.GlassBorder
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -54,8 +56,10 @@ fun CosmicGate(
     isPremium: Boolean,
     isPro: Boolean,
     isRevealed: Boolean,
+    isAdFreeActive: Boolean = false,
     isAdLoading: Boolean = false,
     onRevealClick: () -> Unit,
+    adFreeMinutes: Int = 2,
     onSubscribeClick: () -> Unit,
     content: @Composable () -> Unit
 ) {
@@ -63,32 +67,27 @@ fun CosmicGate(
     val canAccess = when {
         isPro -> true
         isPremium -> false
+        isAdFreeActive -> true
         else -> isRevealed
     }
 
-//    // High-converting, low-friction marketing copy
-//    val titleText = when {
-//        isPremium -> "UNLIMITED ACCESS"
-//        else -> "INSTANT ACCESS"
-//    }
-
+    /*
+     * Primary action:
+     *
+     * Premium prompt → Pro is required
+     * Normal prompt  → Watch one ad to unlock
+     */
     val buttonText = when {
-        isPremium -> "GO PRO"
-        else -> "VIEW PROMPT"
+        isPremium -> "Unlock with Pro"
+        else -> "Reveal Prompt"
     }
-
-//    val subtitleText = when {
-//        isPremium ->
-//            "Unlimited access to all premium prompts."
-//        else ->
-//            "Instant access to this prompt."
-//    }
 
     val footerText = when {
         isPremium ->
-            "Zero Ads • Infinite Access • Cancel Anytime"
+            "Premium prompt • Pro access required"
+
         else ->
-            "Quick Ad • Instant Access" // Transparency reduces ad drop-offs
+            "Watch one ad • Get $adFreeMinutes min unlock-free"
     }
 
     Box(
@@ -124,7 +123,7 @@ fun CosmicGate(
                     }
             )
 
-            // VISUAL OVERLAY - Adjusted gradient for much better text visibility
+            // VISUAL OVERLAY
             Box(
                 modifier = Modifier
                     .matchParentSize()
@@ -142,34 +141,14 @@ fun CosmicGate(
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(24.dp).padding(top = 60.dp)
-                        //.offset(y = (20).dp)
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 60.dp)
                 ) {
 
-//                    Text(
-//                        text = titleText,
-//                        style = MaterialTheme.typography.labelMedium.copy(
-//                            letterSpacing = 2.sp,
-//                            fontWeight = FontWeight.Black
-//                        ),
-//                        color = CosmicAccent
-//                    )
-//
-//                    Spacer(modifier = Modifier.height(10.dp))
-//
-//                    Text(
-//                        text = subtitleText,
-//                        style = MaterialTheme.typography.bodyMedium,
-//                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.90f), // Slightly boosted text alpha for readability
-//                        textAlign = TextAlign.Center
-//                    )
-//
-//                    Spacer(modifier = Modifier.height(18.dp))
-
-
+                    // PRIMARY ACTION
                     Button(
                         enabled = !isAdLoading,
-
                         onClick = {
                             if (isPremium) {
                                 onSubscribeClick()
@@ -185,29 +164,91 @@ fun CosmicGate(
                     ) {
 
                         if (isAdLoading) {
-                            //CircularWavyProgressIndicator(modifier = Modifier.size(16.dp), color = Color(0xF0D55900),)
-                            LoadingIndicator(modifier = Modifier.size(20.dp), color = Color(0xF0D55900))
+
+                            LoadingIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color(0xF0D55900)
+                            )
+
                         } else {
-                            Text(buttonText)
+
+                            Text(
+                                text = buttonText,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Spacer(
+                                modifier = Modifier.width(8.dp)
+                            )
+
+                            Icon(
+                                painter = if (isPremium) {
+                                    painterResource(
+                                        Res.drawable.ic_star_orbit
+                                    )
+                                } else {
+                                    painterResource(
+                                        Res.drawable.ic_gift_box
+                                    )
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Icon(
-                            painter= if(isPremium) painterResource(Res.drawable.ic_star_orbit) else painterResource(Res.drawable.ic_gift_box),
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = footerText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                        textAlign = TextAlign.Center
+                    Spacer(
+                        modifier = Modifier.height(10.dp)
                     )
+
+                    // SECONDARY OPTION
+                    if (isPremium) {
+
+                        Text(
+                            text = footerText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = 0.65f
+                            ),
+                            textAlign = TextAlign.Center
+                        )
+
+                    } else {
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+
+                            Text(
+                                text = footerText,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(
+                                    alpha = 0.65f
+                                ),
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(
+                                modifier = Modifier.width(5.dp)
+                            )
+
+                            Text(
+                                text = "or Get Pro",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                color = CosmicAccent.copy(alpha = 0.85f),
+                                modifier = Modifier.pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onTap = {
+                                            onSubscribeClick()
+                                        }
+                                    )
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }

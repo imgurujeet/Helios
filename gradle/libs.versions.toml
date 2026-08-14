@@ -46,6 +46,7 @@ googleFirebaseCrashlytics = "3.0.7"
 firebaseCommonKtxVersion = "22.1.0"
 play-app-update = "2.1.0"
 play-review = "2.0.2"
+firebaseConfig = "23.1.0"
 
 
 
@@ -130,6 +131,7 @@ firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 firebase-inappmessaging-display = { module = "com.google.firebase:firebase-inappmessaging-display" }
 firebase-common-ktx = { group = "com.google.firebase", name = "firebase-common-ktx", version.ref = "firebaseCommonKtxVersion" }
+firebase-config = { group = "com.google.firebase", name = "firebase-config", version.ref = "firebaseConfig" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

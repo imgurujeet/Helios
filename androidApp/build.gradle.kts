@@ -17,6 +17,7 @@ kotlin {
 dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
+    implementation(libs.firebase.config)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.inappmessaging.display)
@@ -42,8 +43,8 @@ android {
         applicationId = "ai.achaialabs.helios"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 11
-        versionName = "1.1.0"
+        versionCode = 13
+        versionName = "1.3.0"
 
         val localProperties = Properties()
         val localFile = rootProject.file("local.properties")

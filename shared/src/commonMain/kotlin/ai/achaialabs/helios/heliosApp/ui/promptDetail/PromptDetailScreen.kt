@@ -1,6 +1,7 @@
 package ai.achaialabs.helios.heliosApp.ui.promptDetail
 
 import ai.achaialabs.helios.heliosApp.ad.AdManager
+import ai.achaialabs.helios.heliosApp.ad.NativeAdCard
 import ai.achaialabs.helios.heliosApp.ad.RewardedAdState
 import ai.achaialabs.helios.heliosApp.domain.model.FeedMedia
 import ai.achaialabs.helios.heliosApp.domain.model.Prompt
@@ -246,9 +247,11 @@ fun PromptDetailScreen(
                                 CosmicGate(
                                     isPremium = currentPrompt.isPremium,
                                     isPro = uiState.isProUser,
+                                    isRevealed = uiState.revealedPrompts.contains(currentPrompt.id),
+                                    isAdFreeActive = uiState.isAdFreeActive,
+                                    adFreeMinutes = uiState.adFreeMinutes,
                                     isAdLoading =
                                         uiState.rewardedAdState is RewardedAdState.Loading,
-                                    isRevealed = uiState.revealedPrompts.contains(currentPrompt.id),
                                     onRevealClick = {
                                         viewModel.revealPrompt(
                                             currentPrompt.id
@@ -297,6 +300,17 @@ fun PromptDetailScreen(
 
                             item { TagsSection(currentPrompt = currentPrompt) }
                            // item { HeliosRecommendationCard() }
+
+                            item {
+                                if (
+                                    uiState.showAds
+                                ){
+                                    NativeAdCard(
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+
+                            }
 
 
                         }

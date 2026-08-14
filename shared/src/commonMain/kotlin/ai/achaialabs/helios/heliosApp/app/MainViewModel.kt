@@ -6,11 +6,13 @@ import ai.achaialabs.helios.heliosApp.app.update.UpdateResult
 import ai.achaialabs.helios.heliosApp.data.local.AppPreference
 import ai.achaialabs.helios.heliosApp.data.local.NavigationStyle
 import ai.achaialabs.helios.heliosApp.data.remote.service.SubscriptionManager
+import ai.achaialabs.helios.heliosApp.domain.service.AdFreeAccessManager
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.IsLoggedInUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.LogoutUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.review.LaunchReviewUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.update.CheckForUpdateUseCase
 import ai.achaialabs.helios.heliosApp.firebase.analytics.AnalyticsService
+import ai.achaialabs.helios.heliosApp.firebase.remoteconfig.RemoteConfigService
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revenuecat.purchases.kmp.Purchases
@@ -20,8 +22,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
 
 class MainViewModel(
     private val supabase: SupabaseClient,
@@ -32,7 +36,9 @@ class MainViewModel(
     private val adManager: AdManager,
     private val analytics: AnalyticsService,
     private val launchReviewUseCase: LaunchReviewUseCase,
-    private val checkForUpdateUseCase: CheckForUpdateUseCase
+    private val remoteConfigService: RemoteConfigService,
+    private val checkForUpdateUseCase: CheckForUpdateUseCase,
+    private val adFreeAccessManager: AdFreeAccessManager,
 ) : ViewModel() {
 
     private val _appState = MutableStateFlow<AppState>(AppState.Loading)
@@ -56,16 +62,49 @@ class MainViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = NavigationStyle.MATERIAL
     )
-
+    val adFreeUntil = adFreeAccessManager.adFreeUntil.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 0L
+    )
 
 
     init {
         preloadAds()
+        fetchRemoteConfig()
         checkSession()
         observeUpdateState()
-
         checkForUpdate()
     }
+
+
+
+
+    private fun fetchRemoteConfig() {
+        viewModelScope.launch {
+
+            try {
+                remoteConfigService.fetchAndActivate()
+
+                println(
+                    "AD FREE ENABLED = ${
+                        remoteConfigService.isRewardedAdFreeEnabled()
+                    }"
+                )
+
+                println(
+                    "AD FREE MINUTES = ${
+                        remoteConfigService.getRewardedAdFreeMinutes()
+                    }"
+                )
+
+            } catch (e: Exception) {
+                println("REMOTE CONFIG ERROR = ${e.message}")
+            }
+        }
+    }
+
+
 
 
     private fun preloadAds() {
@@ -77,6 +116,8 @@ class MainViewModel(
 
 
     private fun checkSession() {
+
+
         viewModelScope.launch {
 
 

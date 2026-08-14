@@ -1,11 +1,13 @@
 package ai.achaialabs.helios.heliosApp.ui.promptDetail
 
 import ai.achaialabs.helios.heliosApp.ad.AdManager
+import ai.achaialabs.helios.heliosApp.ad.NativeAdState
 import ai.achaialabs.helios.heliosApp.ad.RewardedAdState
 import ai.achaialabs.helios.heliosApp.domain.filter.PromptFilter
 import ai.achaialabs.helios.heliosApp.domain.model.HomeFeedType
 import ai.achaialabs.helios.heliosApp.domain.model.Prompt
 import ai.achaialabs.helios.heliosApp.domain.model.Tool
+import ai.achaialabs.helios.heliosApp.domain.service.AdFreeAccessManager
 import ai.achaialabs.helios.heliosApp.domain.usecase.GetHomePromptsUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.ObservePromptByIdUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.ObserveToolsUseCase
@@ -15,6 +17,7 @@ import ai.achaialabs.helios.heliosApp.domain.usecase.ToggleLikeUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.auth.GetCurrentUserUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.viewall.ObservePromptsByCategoryUseCase
 import ai.achaialabs.helios.heliosApp.firebase.Inappmessaging.InAppMessagingService
+import ai.achaialabs.helios.heliosApp.firebase.remoteconfig.RemoteConfigService
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -47,7 +50,13 @@ data class PromptDetailUiState(
     val isProUser: Boolean = false,
     val revealedPrompts: Set<String> = emptySet(),
     val rewardedAdState: RewardedAdState =
-        RewardedAdState.Idle
+        RewardedAdState.Idle,
+    val isAdFreeActive: Boolean = false,
+    val adFreeUntil: Long = 0L,
+    val adFreeMinutes: Int = 0,
+    val showAds: Boolean = true,
+    val nativeAdState: NativeAdState=
+        NativeAdState.Idle
 
 )
 
@@ -62,7 +71,9 @@ class PromptDetailViewModel(
     private val observePromptsByCategoryUseCase: ObservePromptsByCategoryUseCase,
     private val adManager: AdManager,
     private val inAppMessagingService: InAppMessagingService,
+    private val adFreeAccessManager: AdFreeAccessManager,
     private val observePromptByIdUseCase: ObservePromptByIdUseCase,
+    private val remoteConfigService: RemoteConfigService,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PromptDetailUiState())
@@ -79,7 +90,9 @@ class PromptDetailViewModel(
 
     init {
         // STEP 1: Start observing Room database changes for tools
+        loadAdFreeDuration()
         observeTools()
+        observeNativeAds()
 
         // STEP 2: Fetch latest tools from API and save them into Room database
         syncTools()
@@ -87,7 +100,8 @@ class PromptDetailViewModel(
         // STEP 3: Observe user state
         getCurrentUserUseCase()
             .onEach { user ->
-                _uiState.update { it.copy(isProUser = user?.isPro ?: false) }
+                _uiState.update { it.copy(isProUser = user?.isPro ?: false,
+                    showAds = !(user?.isPro ?: false)) }
             }
             .launchIn(viewModelScope)
 
@@ -110,6 +124,47 @@ class PromptDetailViewModel(
                 }
             }
             .launchIn(viewModelScope)
+
+
+        adFreeAccessManager.adFreeUntil
+            .onEach { until ->
+
+                val isActive =
+                    until > kotlin.time.Clock.System
+                        .now()
+                        .toEpochMilliseconds()
+
+                _uiState.update {
+                    it.copy(
+                        adFreeUntil = until,
+                        isAdFreeActive = isActive
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+
+    private fun observeNativeAds() {
+        adManager.nativeAdState
+            .onEach { state ->
+
+                _uiState.update {
+                    it.copy(
+                        nativeAdState = state
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun loadAdFreeDuration() {
+        _uiState.update {
+            it.copy(
+                adFreeMinutes =
+                    remoteConfigService.getRewardedAdFreeMinutes()
+            )
+        }
     }
 
     // Call this from your Compose screen via a LaunchedEffect
@@ -291,10 +346,15 @@ class PromptDetailViewModel(
 
         val currentState = _uiState.value
 
+        // 1. Pro user → everything they are entitled to can open
         if (currentState.isProUser) {
-
             unlockPrompt(promptId)
+            return
+        }
 
+        // 2. Temporary ad-free access → free prompts can open
+        if (currentState.isAdFreeActive) {
+            unlockPrompt(promptId)
             return
         }
 
@@ -303,8 +363,10 @@ class PromptDetailViewModel(
             RewardedAdState.Loaded -> {
                 println("Loaded -> show ad")
                 adManager.showRewardedAd {
-
-                    unlockPrompt(promptId)
+                    viewModelScope.launch {
+                        adFreeAccessManager.grantRewardedAdFreeAccess()
+                        unlockPrompt(promptId)
+                    }
                 }
             }
 

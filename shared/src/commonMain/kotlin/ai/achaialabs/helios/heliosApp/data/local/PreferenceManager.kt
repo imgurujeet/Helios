@@ -23,6 +23,11 @@ class AppPreference(
     private val themeKey = booleanPreferencesKey("is_dark_theme")
     private val navigationStyleKey =
         stringPreferencesKey("navigation_style")
+
+    private val adFreeUntilKey =
+        longPreferencesKey("ad_free_until")
+
+
     val themeFlow: Flow<Boolean?> = dataStore.data.map { preferences ->
         preferences[themeKey]
     }
@@ -34,6 +39,27 @@ class AppPreference(
         dataStore.data.map { preferences ->
             preferences[lastNotificationPromptTimeKey] ?: 0L
         }
+
+
+    val adFreeUntilFlow: Flow<Long> =
+        dataStore.data.map { preferences ->
+            preferences[adFreeUntilKey] ?: 0L
+        }
+
+
+
+    suspend fun saveAdFreeUntil(timestamp: Long) {
+        dataStore.edit { preferences ->
+            preferences[adFreeUntilKey] = timestamp
+        }
+    }
+
+    suspend fun clearAdFreeUntil() {
+        dataStore.edit { preferences ->
+            preferences.remove(adFreeUntilKey)
+        }
+    }
+
 
     suspend fun saveTheme(isDark: Boolean) {
         dataStore.edit { preferences ->

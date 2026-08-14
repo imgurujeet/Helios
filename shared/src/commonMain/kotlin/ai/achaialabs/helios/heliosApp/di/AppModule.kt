@@ -30,6 +30,7 @@ import ai.achaialabs.helios.heliosApp.data.local.dao.HomeFeedDao
 import ai.achaialabs.helios.heliosApp.data.remote.service.SubscriptionManager
 import ai.achaialabs.helios.heliosApp.data.repository.NotificationRepositoryImpl
 import ai.achaialabs.helios.heliosApp.domain.repository.NotificationRepository
+import ai.achaialabs.helios.heliosApp.domain.service.AdFreeAccessManager
 import ai.achaialabs.helios.heliosApp.domain.usecase.fcm.UpdateFcmTokenUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.review.LaunchReviewUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.update.CheckForUpdateUseCase
@@ -117,6 +118,12 @@ val appModule = module {
         NotificationRepositoryImpl(
             supabase = get(),
             authRepository = get()
+        )
+    }
+    single {
+        AdFreeAccessManager(
+            appPreference = get(),
+            remoteConfigService = get()
         )
     }
 
@@ -217,7 +224,9 @@ val appModule = module {
             getCurrentUserUseCase = get(),
             adManager = get(),
             inAppMessagingService = get(),
-            observePromptByIdUseCase = get()
+            observePromptByIdUseCase = get(),
+            adFreeAccessManager = get(),
+            remoteConfigService = get()
 
         )
     }
@@ -227,7 +236,7 @@ val appModule = module {
     }
 
     viewModel {
-        MainViewModel(get(),get(),get(), get(), get(), get(),get(),get(),get())
+        MainViewModel(get(),get(),get(), get(), get(), get(),get(),get(),get(),get(),get())
     }
 
 

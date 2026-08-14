@@ -28,12 +28,15 @@ class NotificationRepositoryImpl(
 
         supabase
             .from("user_fcm_tokens")
-            .insert(
+            .upsert(
                 FcmTokenDto(
                     user_id = user.id,
                     token = token,
                     platform = "android"
                 )
-            )
+
+            ) {
+                onConflict = "token"
+            }
     }
 }
