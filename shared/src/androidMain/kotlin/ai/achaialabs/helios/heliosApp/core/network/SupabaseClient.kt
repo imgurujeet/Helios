@@ -8,6 +8,7 @@ import io.github.jan.supabase.compose.auth.appleNativeLogin
 import io.github.jan.supabase.compose.auth.googleNativeLogin
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
 
 
@@ -19,6 +20,7 @@ actual fun createSupabaseClient(): SupabaseClient {
         install(Postgrest)
         install(Auth)
         install(Storage)
+        install(Realtime)
         install(ComposeAuth) {
             googleNativeLogin(serverClientId = BuildKonfig.GOOGLE_CLIENT_ID)
             appleNativeLogin()

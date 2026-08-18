@@ -7,8 +7,14 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.postgresChangeFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withContext
 
 class ExploreRemoteDataSource(
@@ -101,5 +107,36 @@ class ExploreRemoteDataSource(
                 crashlytics.recordException(e)
             }
         }
+    }
+
+
+    private val categoriesChannel =
+        supabase.channel("explore-categories-realtime")
+
+    private val promptsChannel =
+        supabase.channel("explore-prompts-realtime")
+
+    fun observeCategoryChanges(): Flow<PostgresAction> {
+        return categoriesChannel
+            .postgresChangeFlow<PostgresAction>(
+                schema = "public"
+            ) {
+                table = "categories"
+            }
+            .onStart {
+                categoriesChannel.subscribe()
+            }
+    }
+
+    fun observePromptChanges(): Flow<PostgresAction> {
+        return promptsChannel
+            .postgresChangeFlow<PostgresAction>(
+                schema = "public"
+            ) {
+                table = "prompts"
+            }
+            .onStart {
+                promptsChannel.subscribe()
+            }
     }
 }

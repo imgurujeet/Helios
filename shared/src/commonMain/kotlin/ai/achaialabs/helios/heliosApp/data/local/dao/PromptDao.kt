@@ -60,6 +60,14 @@ interface PromptDao {
     @Query("DELETE FROM prompts")
     suspend fun deleteAll()
 
+
+    @Query("""
+    DELETE FROM prompts
+    WHERE id = :id
+""")
+    suspend fun deletePrompt(
+        id: String
+    )
     @Query("""
         SELECT *
         FROM prompts

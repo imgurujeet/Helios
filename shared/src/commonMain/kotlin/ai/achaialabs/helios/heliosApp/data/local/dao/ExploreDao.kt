@@ -79,6 +79,47 @@ interface ExploreDao {
         prompts: List<PromptEntity>
     )
 
+
+    @Query("DELETE FROM category_table WHERE id = :categoryId")
+    suspend fun deleteCategory(
+        categoryId: String
+    )
+
+    @Query("DELETE FROM prompts WHERE id = :promptId")
+    suspend fun deletePrompt(
+        promptId: String
+    )
+
+    @Query("DELETE FROM prompts WHERE categoryId = :categoryId")
+    suspend fun deletePromptsForCategory(
+        categoryId: String
+    )
+
+
+
+    /**
+     * Remove categories that no longer exist in the remote result.
+     */
+    @Query("""
+        DELETE FROM category_table
+        WHERE id NOT IN (:categoryIds)
+    """)
+    suspend fun deleteCategoriesNotIn(
+        categoryIds: List<String>
+    )
+
+    /**
+     * Remove prompts that no longer belong to the
+     * currently synchronized categories.
+     */
+    @Query("""
+        DELETE FROM prompts
+        WHERE categoryId NOT IN (:categoryIds)
+    """)
+    suspend fun deletePromptsNotInCategories(
+        categoryIds: List<String>
+    )
+
     /**
      * Insert categories and prompts in one transaction.
      */

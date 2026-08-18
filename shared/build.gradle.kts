@@ -90,7 +90,7 @@ kotlin {
     sourceSets {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
-            implementation(libs.ktor.client.android)
+            implementation(libs.ktor.client.cio)
             implementation(libs.androidx.media3.exoplayer)
             implementation(libs.androidx.media3.ui)
             implementation(libs.androidx.media3.common)
@@ -147,6 +147,7 @@ kotlin {
             implementation(libs.supabase.auth)
             implementation(libs.supabase.compose.auth)
             implementation(libs.supabase.storage)
+            implementation(libs.realtime.kt)
             //revenuecat
             implementation(libs.revenuecat.core)
             implementation(libs.revenuecat.ui)

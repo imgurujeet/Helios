@@ -24,6 +24,14 @@ interface HomeFeedDao {
         feedType: HomeFeedType
     )
 
+    @Query("""
+    DELETE FROM home_feed
+    WHERE promptId = :promptId
+""")
+    suspend fun deletePromptFromHomeFeed(
+        promptId: String
+    )
+
     @Transaction
     @Query("""
         SELECT *
@@ -35,6 +43,8 @@ interface HomeFeedDao {
         feedType: HomeFeedType,
     ): Flow<List<HomePromptRelation>>
 }
+
+
 
 
 class HomeFeedTypeConverter {

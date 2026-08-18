@@ -13,4 +13,11 @@ interface ExploreRepository {
 
     fun observePromptsByCategory(categoryId: String, limit: Int, offset: Int): Flow<List<Prompt>>
     suspend fun syncPromptsForCategory(categoryId: String, limit: Int, offset: Int): Result<Boolean>
+
+
+    suspend fun deleteCategoryLocally(categoryId: String)
+
+    suspend fun deletePromptLocally(promptId: String)
+
+    suspend fun observeRealtimeChanges()
 }

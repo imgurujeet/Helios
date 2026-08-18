@@ -43,8 +43,8 @@ android {
         applicationId = "ai.achaialabs.helios"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 13
-        versionName = "1.3.0"
+        versionCode = 14
+        versionName = "1.4.0"
 
         val localProperties = Properties()
         val localFile = rootProject.file("local.properties")

@@ -181,7 +181,7 @@ class HomeViewModel(
             isSyncing = true
             currentPage = 0
             hasReachedEnd = false
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isPromptRefreshing = true) }
 
             try {
                 when (uiState.value.selectedTab) {
@@ -203,7 +203,7 @@ class HomeViewModel(
                 _uiState.update { it.copy(error = e.message ?: "Failed to refresh feed") }
             } finally {
                 isSyncing = false
-                _uiState.update { it.copy(isLoading = false) }
+                _uiState.update { it.copy(isLoading = false, isPromptRefreshing = false) }
             }
         }
     }

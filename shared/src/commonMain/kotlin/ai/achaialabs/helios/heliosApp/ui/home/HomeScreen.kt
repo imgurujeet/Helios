@@ -20,26 +20,35 @@ import ai.achaialabs.helios.heliosApp.ui.share.manager.ShareManager
 import ai.achaialabs.helios.heliosApp.ui.share.model.SharePromptUi
 import ai.achaialabs.helios.heliosApp.utils.ObserveScroll
 import ai.achaialabs.helios.heliosApp.utils.rememberExternalAppLauncher
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -52,15 +61,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.math.min
 
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -75,7 +89,7 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val isPro by viewModel.isPremium.collectAsStateWithLifecycle()
     val promptId = ""
-
+    val pullToRefreshState = rememberPullToRefreshState()
     val scrollBehavior =
         TopAppBarDefaults.enterAlwaysScrollBehavior()
     val listState = rememberLazyStaggeredGridState()
@@ -184,69 +198,92 @@ fun HomeScreen(
                     modifier = Modifier.size(56.dp),
                     color = Color(0xF0D55900),
                 )
+
             }
 
         }else{
 
-            HomeScreenContent(
-                modifier = Modifier.padding(innerPadding),
-                uiState = uiState,
-                listState = listState,
-                selectedFilter = uiState.selectedTab,
-                onFilterSelected = viewModel::onFeedSelected,
-                onPlayClick = viewModel::onPlayClick,
-                onLikeClick = viewModel::onLikeClick,
-                onShareClick = { prompt ->
-                    viewModel.onSharePrompt(prompt)
-                    sharePrompt = prompt
+            PullToRefreshBox(
+                isRefreshing = uiState.isPromptRefreshing,
+                onRefresh = {
+                    viewModel.refresh()
                 },
-                onPromptClick = { promptId ->
-                    viewModel.onPromptOpened(promptId)
-                    chromeState.navigateTo(PromptDetail(promptId))
+                state = pullToRefreshState,
+                indicator = {
+                    PullToRefreshDefaults.Indicator(
+                        state = pullToRefreshState,
+                        isRefreshing = uiState.isPromptRefreshing,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        color = Color(0xF0D55900)
+                    )
                 },
-                onHeroClick = { action ->
+
+                modifier = Modifier.fillMaxSize()
+            ) {
+                HomeScreenContent(
+                    modifier = Modifier.padding(innerPadding),
+                    uiState = uiState,
+                    listState = listState,
+                    selectedFilter = uiState.selectedTab,
+                    onFilterSelected = viewModel::onFeedSelected,
+                    onPlayClick = viewModel::onPlayClick,
+                    onLikeClick = viewModel::onLikeClick,
+                    onShareClick = { prompt ->
+                        viewModel.onSharePrompt(prompt)
+                        sharePrompt = prompt
+                    },
+                    onPromptClick = { promptId ->
+                        viewModel.onPromptOpened(promptId)
+                        chromeState.navigateTo(PromptDetail(promptId))
+                    },
+                    onHeroClick = { action ->
 
 
-                    when (action) {
+                        when (action) {
 
-                        is HeroAction.OpenPrompt -> {
-                            viewModel.onHeroClicked("prompt")
-                            chromeState.navigateTo(
-                                PromptDetail(promptId = action.promptId)
-                            )
-                        }
-
-                        is HeroAction.OpenCategory -> {
-                            viewModel.onHeroClicked(action.categoryName)
-                            chromeState.navigateTo(
-                                ViewAll(
-                                    categoryId = action.categoryId,
-                                    categoryName = action.categoryName
+                            is HeroAction.OpenPrompt -> {
+                                viewModel.onHeroClicked("prompt")
+                                chromeState.navigateTo(
+                                    PromptDetail(promptId = action.promptId)
                                 )
-                            )
-                        }
+                            }
 
-                        is HeroAction.OpenUrl -> {
-                            viewModel.onHeroClicked("URL:${action.url}")
-                            uriHandler.openUri(action.url)
-                        }
+                            is HeroAction.OpenCategory -> {
+                                viewModel.onHeroClicked(action.categoryName)
+                                chromeState.navigateTo(
+                                    ViewAll(
+                                        categoryId = action.categoryId,
+                                        categoryName = action.categoryName
+                                    )
+                                )
+                            }
 
-                        is HeroAction.OpenSearch -> {
-                            viewModel.onHeroClicked("search")
-                            chromeState.navigateTo(
-                                Search
-                            )
-                        }
+                            is HeroAction.OpenUrl -> {
+                                viewModel.onHeroClicked("URL:${action.url}")
+                                uriHandler.openUri(action.url)
+                            }
 
-                        is HeroAction.OpenScreen -> {
-                            // Handle custom screens
-                        }
+                            is HeroAction.OpenSearch -> {
+                                viewModel.onHeroClicked("search")
+                                chromeState.navigateTo(
+                                    Search
+                                )
+                            }
 
-                        HeroAction.None -> Unit
-                    }
-                },
-                onLoadMore = viewModel::loadMore,
-            )
+                            is HeroAction.OpenScreen -> {
+                                // Handle custom screens
+                            }
+
+                            HeroAction.None -> Unit
+                        }
+                    },
+                    onLoadMore = viewModel::loadMore,
+                )
+
+            }
+
+
 
             if (showPreparingShare) {
                 Box(

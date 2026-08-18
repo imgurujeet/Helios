@@ -2,6 +2,7 @@ package ai.achaialabs.helios.heliosApp.ui.explore
 
 
 import ai.achaialabs.helios.heliosApp.domain.usecase.GetPremiumStatusUseCase
+import ai.achaialabs.helios.heliosApp.domain.usecase.ObserveRealtimeChangesUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.explore.ObserveExploreFeedUseCase
 import ai.achaialabs.helios.heliosApp.domain.usecase.explore.SyncExploreFeedUseCase
 import ai.achaialabs.helios.heliosApp.firebase.Inappmessaging.InAppMessagingService
@@ -31,7 +32,8 @@ class ExploreViewModel(
     private val syncExploreFeedUseCase: SyncExploreFeedUseCase,
     private val getPremiumStatusUseCase: GetPremiumStatusUseCase,
     private val analytics: AnalyticsService,
-    private val inAppMessagingService: InAppMessagingService
+    private val inAppMessagingService: InAppMessagingService,
+    private val observeRealtimeChangesUseCase: ObserveRealtimeChangesUseCase
 ) : ViewModel() {
 
     companion object {
@@ -62,11 +64,37 @@ class ExploreViewModel(
 
     init {
         observeLocalDatabase()
+        observeRealtimeChanges()
 
         // Fetch first page.
         loadMore()
     }
 
+
+    /**
+     * Supabase Realtime changes are handled below the ViewModel.
+     *
+     * Realtime -> Repository -> Room
+     *
+     * Room then automatically emits through observeExploreFeed().
+     */
+    private fun observeRealtimeChanges() {
+        viewModelScope.launch {
+            try {
+                println("EXPLORE REALTIME: starting")
+                observeRealtimeChangesUseCase()
+            } catch (e: Throwable) {
+                println("EXPLORE REALTIME ERROR: ${e.stackTraceToString()}")
+
+                _uiState.update {
+                    it.copy(
+                        error = e.message
+                            ?: "Realtime synchronization failed."
+                    )
+                }
+            }
+        }
+    }
     /**
      * Observe Room.
      *

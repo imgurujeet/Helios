@@ -186,6 +186,10 @@ val appModule = module {
     factory {
         CheckForUpdateUseCase(get())
     }
+    factory {
+        ObserveRealtimeChangesUseCase(get())
+    }
+
 
 
     // ViewModels
@@ -198,7 +202,8 @@ val appModule = module {
     }
 
     viewModel {
-        ExploreViewModel(get(), get(), get(),get(),get())
+        ExploreViewModel(get(), get(), get(),get(),get(),
+        get())
     }
     viewModel { (id: String, name: String) ->
         ViewAllViewModel(
